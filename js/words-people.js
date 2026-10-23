@@ -1,0 +1,103 @@
+'use strict';
+// words-people.js — people, heroes, villains, monsters & magical creatures.
+(function () {
+  const D = SB.D, M = SB.merge, TAU = SB.TAU;
+  const P = (name, spec) => SB.def(name, M({ cat: 'person', creature: true, move: 'walk', speed: 100, temper: 'curious', mass: 3, tags: ['human'], fears: ['scary', 'predator', 'creepy'], hunts: ['food'], eats: ['food'], say: ['Hi!', 'Hello!', 'Nice day!', 'What a world!'], heldMood: 'scared' }, spec));
+  const C = (name, spec) => SB.def(name, M({ cat: 'creature', creature: true, move: 'walk', speed: 90, temper: 'neutral', mass: 4, tags: [], fears: [], hunts: [], eats: [], say: [] }, spec));
+  const hero = { tags: ['hero'], temper: 'neutral', fears: [], hunts: ['villain', 'monster'], heldMood: 'happy' };
+  const villain = { tags: ['villain', 'scary'], temper: 'hostile', fears: ['hero'], hunts: ['human'], heldMood: 'angry' };
+
+  // ---- everyday people ----
+  P('person', { t: D.humanoid({ hair: 'short' }), aliases: ['man', 'human', 'guy', 'dude', 'people', 'someone', 'adult', 'stickman', 'stick man', 'stick figure', 'stickfigure', 'figure', 'boyfriend', 'husband', 'neighbor', 'stranger', 'james', 'friend'] });
+  P('woman', { t: D.humanoid({ hair: 'long' }), aliases: ['lady', 'mom', 'mother', 'mum', 'mommy', 'mama', 'girlfriend', 'wife', 'aunt', 'sister'], say: ['Hi there!', 'Hello!', 'Lovely!'] });
+  P('boy', { t: D.humanoid({ size: 55, hair: 'spiky', hat: 'cap' }), aliases: ['kid', 'child', 'son', 'student', 'brother', 'little boy', 'schoolboy'], speed: 130, mass: 2, hunts: ['ice cream', 'candy', 'cookie', 'ice cream truck', 'ball', 'toy'], eats: ['ice cream', 'candy', 'cookie'], say: ['Cool!', 'Awesome!', 'Can I have a snack?', 'Yay!'], jumpy: 0.2 });
+  P('girl', { t: D.humanoid({ size: 55, hair: 'pigtails', dress: true }), aliases: ['daughter', 'little girl', 'schoolgirl'], speed: 130, mass: 2, hunts: ['ice cream', 'candy', 'cookie', 'unicorn', 'puppy', 'kitten'], eats: ['ice cream', 'candy', 'cookie'], say: ['Yay!', 'So cute!', 'Let\'s play!', 'Tee hee!'], jumpy: 0.2 });
+  P('baby', { t: D.humanoid({ size: 36, headR: 11, hair: 'tuft', bigHead: true }), aliases: ['infant', 'toddler', 'newborn'], speed: 40, mass: 1, temper: 'curious', hunts: ['milk', 'bottle', 'teddy bear'], eats: ['milk'], say: ['Goo goo!', 'Waaah!', 'Gaga!', 'Mama?'], heldMood: 'happy' });
+  P('grandma', { t: D.humanoid({ hair: 'bun', glasses: true, item: 'cane', dress: true }), aliases: ['grandmother', 'granny', 'nana', 'old lady', 'old woman'], speed: 40, say: ['Hello dearie!', 'Cookies, anyone?', 'Back in my day...'] });
+  P('grandpa', { t: D.humanoid({ hair: 'bald', beard: 'short', glasses: true, item: 'cane' }), aliases: ['grandfather', 'grandad', 'old man', 'elder'], speed: 40, say: ['Back in my day...', 'Eh? Speak up!', 'Whippersnapper!'] });
+  P('dad', { t: D.humanoid({ hair: 'short', mustache: true, tie: true }), aliases: ['father', 'daddy', 'papa', 'uncle'], say: ['Hi kiddo!', 'Hi hungry, I\'m dad!', 'Who touched the thermostat?'] });
+  P('police', { t: D.humanoid({ hat: 'police', badge: true, mustache: true }), aliases: ['cop', 'officer', 'policeman', 'police officer', 'policewoman', 'sheriff', 'guard', 'security guard'], tags: ['hero'], temper: 'neutral', hunts: ['villain', 'thief'], fears: ['scary', 'predator'], say: ['Stop right there!', 'Freeze!', 'Move along!'], heldMood: 'angry' });
+  P('doctor', { t: D.humanoid({ stethoscope: true, glasses: true, hair: 'short' }), aliases: ['nurse', 'medic', 'dentist', 'vet', 'surgeon'], say: ['Say ahh!', 'Take two of these', 'Where does it hurt?'] });
+  P('firefighter', { t: D.humanoid({ hat: 'fire', item: 'axe', mustache: true }), aliases: ['fireman', 'fire fighter', 'fire man'], tags: ['hero'], temper: 'neutral', hunts: ['fire'], special: 'extinguish', say: ['Where\'s the fire?', 'Stay calm!', 'Psssh!'] });
+  P('chef', { t: D.humanoid({ hat: 'chef', apron: true, mustache: true }), aliases: ['cook', 'baker'], hunts: ['food'], say: ['Bon appétit!', 'Mmm, magnifique!', 'Order up!'] });
+  P('farmer', { t: D.humanoid({ hat: 'cowboy', item: 'pitchfork', beard: 'short' }), aliases: ['rancher'], say: ['Yeehaw!', 'Howdy!', 'Get off my land!'] });
+  P('cowboy', { t: D.humanoid({ hat: 'cowboy', mustache: true }), aliases: ['cowgirl', 'sheriff cowboy', 'wrangler'], speed: 120, hunts: ['horse', 'cow', 'bull'], say: ['Yeehaw!', 'Howdy partner!', 'Giddy up!'] });
+  P('astronaut', { t: D.humanoid({ hat: 'astronaut', backpack: true }), aliases: ['spaceman', 'space man', 'cosmonaut'], gravity: 0.25, bounce: 0.4, jumpy: 0.5, say: ['One small step...', 'Houston!', 'To the moon!'], fears: ['alien', 'scary'] });
+  P('teacher', { t: D.humanoid({ glasses: true, hair: 'bun', item: 'book', dress: true }), aliases: ['professor', 'librarian'], say: ['Homework!', 'Quiet please!', 'Any questions?'] });
+  P('scientist', { t: D.humanoid({ hair: 'spiky', glasses: true, apron: true }), aliases: ['mad scientist', 'inventor', 'genius', 'nerd'], say: ['Eureka!', 'Fascinating!', 'It\'s alive!'] });
+  P('soldier', { t: D.humanoid({ hat: 'beanie', backpack: true }), aliases: ['army', 'army man', 'trooper', 'marine', 'general', 'captain'], tags: ['hero'], temper: 'neutral', hunts: ['villain', 'monster'], fears: [], say: ['Sir, yes sir!', 'Hup two three four!', 'Attention!'] });
+  P('builder', { t: D.humanoid({ hat: 'hardhat', item: 'hammer' }), aliases: ['construction worker', 'worker', 'carpenter', 'handyman', 'plumber', 'mechanic'], say: ['Can we fix it?', 'Yes we can!', 'Hard hat area!'] });
+  P('mailman', { t: D.humanoid({ hat: 'mailman', bag: true, item: 'letter' }), aliases: ['postman', 'mail man', 'mail carrier', 'delivery man', 'delivery'], fears: ['dog', 'scary'], say: ['Mail!', 'Special delivery!', 'Neither rain nor snow...'] });
+  P('clown', { t: D.humanoid({ hair: 'curly', nose: true, bowtie: true, item: 'balloon', hat: 'party' }), aliases: ['jester', 'joker'], say: ['Honk honk!', 'Ta-da!', 'Wanna see a trick?'], jumpy: 0.3 });
+  P('santa', { t: D.humanoid({ hat: 'santa', beard: 'long', belly: true, bag: true }), aliases: ['santa claus', 'father christmas', 'saint nick'], speed: 70, mass: 5, hunts: ['cookie', 'milk', 'reindeer'], eats: ['cookie', 'milk'], say: ['Ho ho ho!', 'Merry Christmas!', 'Have you been good?'] });
+  P('king', { t: D.humanoid({ hat: 'crown', beard: 'short', cape: true, belly: true }), aliases: ['emperor', 'lord'], speed: 70, hunts: ['gold', 'treasure', 'crown'], say: ['I am the king!', 'Bow before me!', 'Off with their heads!'] });
+  P('queen', { t: D.humanoid({ hat: 'crown', hair: 'long', dress: true }), aliases: ['empress'], speed: 70, say: ['Greetings, subjects!', 'We are not amused.', 'Tea time!'] });
+  P('prince', { t: D.humanoid({ hat: 'tiara', size: 62, cape: true, hair: 'short' }), say: ['Charming!', 'Hello!'] });
+  P('princess', { t: D.humanoid({ hat: 'tiara', hair: 'long', dress: true }), fears: ['dragon', 'scary', 'predator', 'creepy', 'frog'], hunts: ['unicorn', 'prince', 'candy'], eats: ['candy'], say: ['Tee hee!', 'Someday my prince will come!', 'Sparkles!'] });
+  P('knight', M(hero, { t: D.humanoid({ hat: 'helmet', item: 'sword', shield: true }), aliases: ['warrior', 'paladin', 'crusader', 'samurai', 'swordsman', 'gladiator'], speed: 110, mass: 5, hunts: ['dragon'], say: ['For the king!', 'Have at thee!', 'Fear not!'] }));
+  P('ninja', M(hero, { t: D.humanoid({ mask: 'ninja', hat: 'bandana', item: 'sword' }), aliases: ['assassin', 'shinobi'], speed: 240, hunts: ['pirate'], say: ['...', 'Hi-YA!', '*vanish*'], jumpy: 0.6 }));
+  P('pirate', { t: D.humanoid({ hat: 'pirate', mask: 'eyepatch', beard: 'short', hook: true, item: 'sword' }), aliases: ['buccaneer', 'captain hook', 'blackbeard'], tags: ['villain'], temper: 'neutral', fears: ['ninja', 'scary', 'predator'], hunts: ['treasure', 'gold', 'coin', 'parrot'], eats: ['gold', 'coin'], say: ['Arrr!', 'Yo ho ho!', 'Shiver me timbers!', 'Where be the treasure?'] });
+  P('wizard', { t: D.humanoid({ hat: 'wizard', beard: 'long', item: 'staff' }), aliases: ['sorcerer', 'mage', 'magician', 'warlock', 'gandalf', 'merlin'], speed: 70, temper: 'neutral', fears: ['scary'], special: 'sparkle', say: ['Abracadabra!', 'You shall not pass!', 'Hocus pocus!'] });
+  P('witch', { t: D.humanoid({ hat: 'witch', hair: 'long', item: 'broom', nose: false }), aliases: ['sorceress', 'enchantress', 'hag'], tags: ['villain'], temper: 'neutral', fears: ['water', 'bucket', 'hero'], hunts: ['frog', 'cat', 'candy', 'child'], special: 'sparkle', say: ['Hee hee hee!', 'Eye of newt...', 'I\'ll get you, my pretty!'] });
+  P('superhero', M(hero, { t: D.humanoid({ cape: true, mask: 'hero', emblem: true }), aliases: ['hero', 'super hero', 'superman', 'batman', 'spiderman', 'super man', 'supergirl', 'wonder woman', 'captain', 'avenger'], move: 'fly', speed: 260, hunts: ['scary'], say: ['Up, up and away!', 'Never fear!', 'Justice!'], flyMin: 0.1, flyMax: 0.7 }));
+  P('detective', { t: D.humanoid({ hat: 'cap', item: 'magnifier', mustache: true }), aliases: ['sherlock', 'inspector', 'spy', 'investigator'], hunts: ['thief', 'clue', 'footprint'], say: ['Elementary!', 'A clue!', 'Hmm, suspicious...'] });
+  P('thief', { t: D.humanoid({ mask: 'hero', hat: 'beanie', bag: true, stripes: true }), aliases: ['robber', 'burglar', 'bandit', 'crook', 'bad guy', 'criminal', 'villain'], tags: ['villain'], temper: 'neutral', speed: 140, fears: ['police', 'hero', 'dog', 'scary', 'predator'], hunts: ['gold', 'coin', 'treasure', 'money', 'diamond', 'ring'], eats: ['gold', 'coin', 'money', 'diamond', 'ring'], say: ['Heh heh heh', 'Mine!', 'Nobody saw that...'] });
+  P('dancer', { t: D.humanoid({ dress: true, hair: 'bun' }), aliases: ['ballerina', 'ballet dancer'], special: 'dance', say: ['La la la~', 'Twirl!', '*pirouette*'], jumpy: 0.7 });
+  P('rockstar', { t: D.humanoid({ hair: 'mohawk', item: 'guitar', glasses: true }), aliases: ['rock star', 'guitarist', 'musician', 'singer', 'punk'], special: 'music', say: ['Rock on!', 'Hello world!', '♪ ♫'] });
+  P('football player', { t: D.humanoid({ hat: 'helmet', item: 'football', size: 78 }), aliases: ['quarterback', 'athlete', 'jock'], speed: 220, mass: 4, say: ['Hut hut!', 'Touchdown!'] });
+  P('basketball player', { t: D.humanoid({ item: 'basketball', size: 90, hair: 'short' }), aliases: ['baller'], speed: 200, mass: 4, jumpy: 0.5, say: ['Swish!', 'Slam dunk!'] });
+  P('soccer player', { t: D.humanoid({ hair: 'spiky', size: 72 }), aliases: ['footballer', 'striker', 'goalie'], speed: 200, hunts: ['ball', 'soccer ball'], say: ['GOOOAL!', 'Pass!'] });
+  P('tennis player', { t: D.humanoid({ hat: 'cap', item: 'racket' }), speed: 180, hunts: ['tennis ball', 'ball'], say: ['Ace!', 'Love-fifteen!'] });
+  P('painter', { t: D.humanoid({ hat: 'beanie', item: 'brush', mustache: true }), aliases: ['artist'], say: ['Masterpiece!', 'Hmm, needs more blue.', 'Art!'] });
+  P('viking', M(hero, { t: D.humanoid({ hat: 'viking', beard: 'short', item: 'axe', shield: true }), aliases: ['barbarian', 'thor'], speed: 110, mass: 6, say: ['Skål!', 'For Odin!', 'RAAAH!'] }));
+  P('caveman', { t: D.humanoid({ hair: 'spiky', beard: 'short', item: 'club' }), aliases: ['cave man', 'neanderthal', 'cavewoman'], hunts: ['food', 'dinosaur'], fears: ['scary', 'predator', 'fire'], say: ['Ugg!', 'Ooga booga!', 'Me hungry!'] });
+  P('chicken suit', { t: D.humanoid({ hat: 'bunny', nose: true }), aliases: ['bunny suit', 'mascot', 'costume'], say: ['*flap flap*', 'Hooray!'], hidden: true });
+  P('elf', { t: D.humanoid({ size: 55, hat: 'party', hair: 'short' }), aliases: ['gnome', 'dwarf', 'leprechaun', 'hobbit'], speed: 120, hunts: ['gold', 'cookie', 'present'], eats: ['cookie'], say: ['Jingle!', 'Hee hee!', 'Ho ho!'], jumpy: 0.4 });
+  P('scarecrow', { t: D.humanoid({ hat: 'cowboy', hair: 'spiky', item: 'none' }), aliases: ['scare crow'], move: 'none', tags: ['scary'], temper: 'neutral', fears: [], hunts: [], say: ['...', 'Caw! Just kidding.'] });
+  P('robot', { t: D.humanoid({ boxy: true, antenna: 1, eyeR: 2 }), cat: 'creature', aliases: ['droid', 'android', 'bot', 'machine', 'cyborg', 'mech', 'terminator'], speed: 60, mass: 8, temper: 'neutral', tags: ['robot', 'metal'], fears: ['magnet', 'water'], hunts: ['battery'], eats: ['battery'], say: ['Beep boop', 'Does not compute', '01101001', 'Greetings, human'], heldMood: 'normal' });
+  P('alien', { t: D.humanoid({ size: 55, headR: 12, bigHead: true, eyeR: 3.5, antenna: 2, hair: 'bald' }), cat: 'creature', aliases: ['martian', 'extraterrestrial', 'et', 'space alien', 'little green man'], mass: 2, temper: 'curious', tags: ['alien'], fears: ['scary', 'predator'], hunts: ['human', 'cow', 'ufo'], say: ['Take me to your leader', 'Greetings, Earthling', 'Zorp!'], heldMood: 'happy' });
+
+  // ---- monsters & spooky ----
+  C('zombie', M(villain, { t: D.humanoid({ zombie: true, hair: 'spiky' }), aliases: ['zombies', 'undead', 'walker', 'the walking dead'], speed: 45, mass: 3, tags: ['undead', 'human'], hunts: ['human', 'brain'], convert: ['human'], eats: ['brain'], fears: ['hero', 'fire'], say: ['Braaains...', 'Uuuugh...', 'Grrrrr'], roar: ['BRAAAINS!'] }));
+  const ghostT = {
+    w: 36, h: 46, draw(p, e, t) {
+      const wob = Math.sin(t * 3 + e.seed) * 2;
+      p.poly([-16, -6, -14, -18, -6, -23, 6, -23, 14, -18, 16, -6, 16, 14 + wob, 10, 8, 4, 16, -2, 8, -8, 16, -14, 8, -16, 14 - wob], true);
+      p.curve(-16, -2, -26, -8 + wob, -22, 2); p.curve(16, -2, 26, -8 - wob, 22, 2);
+      D.eye(p, -5, -10, 2.6, e, -1); D.eye(p, 5, -10, 2.6, e, 1);
+      if (e.mood === 'happy' || e.mode === 'approach') p.ellipse(0, -1, 3, 4, true); else D.mouth(p, 0, -2, 8, e);
+    }
+  };
+  C('ghost', { t: ghostT, aliases: ['spirit', 'phantom', 'spook', 'poltergeist', 'casper'], move: 'fly', speed: 90, mass: 0.5, temper: 'curious', tags: ['scary', 'undead'], noCollide: true, hunts: ['human'], special: 'boo', fireproof: true, say: ['Boo!', 'Oooooo~', 'Booooo!'], flyMin: 0.15, flyMax: 0.7, heldMood: 'happy' });
+  C('vampire', M(villain, { t: D.humanoid({ cape: true, fangs: true, hair: 'short', tie: true }), aliases: ['dracula', 'count dracula', 'nosferatu'], speed: 140, tags: ['undead', 'human'], fears: ['sun', 'garlic', 'hero'], hunts: ['human'], say: ['Blah blah!', 'I vant to suck your blood!', 'Mwahaha!'], roar: ['BLAH!'] }));
+  C('skeleton', { t: D.humanoid({ ribs: true, eyes: 'sockets', hair: 'bald' }), aliases: ['skeletons', 'bones', 'skelly'], speed: 90, mass: 2, temper: 'curious', tags: ['scary', 'undead', 'villain'], fears: ['dog', 'hero'], say: ['Rattle rattle!', '*clack clack*', 'Spooky scary!'], jumpy: 0.3 });
+  C('mummy', M(villain, { t: D.humanoid({ wrap: true, hair: 'bald' }), aliases: ['the mummy'], speed: 40, tags: ['undead', 'human'], say: ['Mmmmph!', 'Uuuuuuh...', '*shuffle*'], roar: ['MMMPH!'] }));
+  C('monster', M(villain, { t: D.humanoid({ fur: true, horns: true, size: 85, headR: 11, fangs: true }), aliases: ['beast', 'creature', 'thing', 'boogeyman', 'bogeyman', 'bugbear'], speed: 100, mass: 12, tags: ['monster', 'big'], hunts: ['animal', 'pet'], eats: ['prey', 'bug'], say: ['RAWR!', 'GRRR!', 'Me hungry!'], roar: ['RAAAWR!'] }));
+  C('werewolf', M(villain, { t: D.werewolf(86), aliases: ['wolfman', 'wolf man'], speed: 200, mass: 8, tags: ['monster'], fears: ['moon', 'hero'], say: ['AWOOOO!', 'Grrr!', 'Full moon...'], roar: ['AWOOOO!!'] }));
+  C('ogre', M(villain, { t: D.humanoid({ size: 100, headR: 12, belly: true, item: 'club', tusks: true, hair: 'bald' }), aliases: ['troll', 'orc', 'goblin', 'shrek', 'brute'], speed: 60, mass: 20, tags: ['monster', 'big'], hunts: ['knight', 'sheep'], eats: ['sheep'], say: ['Me smash!', 'Grrr!', 'Ogres are like onions!'], roar: ['SMASH!'] }));
+  C('giant', { t: D.humanoid({ size: 160, headR: 9, beard: 'short', belly: true }), aliases: ['titan', 'colossus', 'huge man', 'big man'], speed: 60, mass: 40, temper: 'neutral', tags: ['big', 'scary', 'human'], fears: [], hunts: ['food'], eats: ['food'], say: ['Fee fi fo fum!', 'Hello down there!', 'Careful, tiny ones!'] });
+  C('cyclops', M(villain, { t: D.humanoid({ size: 130, oneEye: true, item: 'club', hair: 'bald' }), speed: 70, mass: 30, tags: ['monster', 'big'], say: ['ONE EYE SEES ALL', 'Grrr!', 'Nobody!'], roar: ['RAAAH!'] }));
+  C('yeti', { t: D.humanoid({ fur: true, size: 95, headR: 11 }), aliases: ['bigfoot', 'sasquatch', 'abominable snowman', 'snow monster'], speed: 90, mass: 14, temper: 'timid', tags: ['monster', 'big'], fears: ['camera', 'human'], say: ['Rarr?', '*grunt*', 'Don\'t look at me!'] });
+  C('devil', M(villain, { t: D.humanoid({ horns: true, tail: 'devil', item: 'trident', hair: 'bald' }), aliases: ['demon', 'imp', 'satan'], speed: 130, tags: ['monster', 'undead'], fears: ['angel', 'hero'], fireproof: true, say: ['Mwahaha!', 'Evil!', 'Hot in here?'], roar: ['MWAHAHA!'] }));
+  C('grim reaper', M(villain, { t: D.humanoid({ hood: true, robe: true, tattered: true, eyes: 'sockets', hair: 'bald', item: 'scythe', size: 80 }), aliases: ['reaper', 'death', 'grim reper', 'reper', 'the grim reaper', 'angel of death', 'the reaper', 'grimm reaper'], speed: 70, mass: 4, tags: ['undead', 'monster'], hunts: ['animal', 'human', 'monster'], fears: ['angel', 'god', 'hero'], special: 'reap', say: ['Your time has come...', 'Tick tock.', '*ominous silence*', 'Any last words?'], roar: ['REAPED!'], hint: 'One touch and it\'s lights out!' }));
+  C('god', { t: D.humanoid({ robe: true, beard: 'long', hair: 'long', halo: true, item: 'bolt', size: 100, headR: 9 }), aliases: ['zeus', 'deity', 'goddess', 'the almighty', 'almighty', 'thor god', 'jupiter', 'odin', 'the gods'], move: 'fly', speed: 90, mass: 40, temper: 'curious', tags: ['magic', 'hero', 'holy'], fireproof: true, fears: [], hunts: [], special: 'smite', say: ['Behold!', 'Let there be light!', 'I see everything.', '*thunder*'], roar: ['SMITE!'], flyMin: 0.05, flyMax: 0.45, heldMood: 'angry', hint: 'Smites villains with lightning!' });
+  C('angel', { t: D.humanoid({ wings: 'angel', halo: true, hair: 'long', dress: true }), aliases: ['cupid', 'cherub', 'guardian angel'], move: 'fly', speed: 100, mass: 2, temper: 'curious', tags: ['hero', 'magic'], fireproof: true, hunts: ['devil', 'villain'], special: 'sparkle', say: ['Hallelujah!', 'Be not afraid!', '*harp*'], flyMin: 0.1, flyMax: 0.6, heldMood: 'happy' });
+  C('fairy', { t: D.humanoid({ size: 38, wings: 'fairy', hair: 'bun', item: 'wand', dress: true }), aliases: ['pixie', 'sprite', 'tinkerbell', 'tooth fairy', 'fairy godmother'], move: 'fly', speed: 130, mass: 0.3, temper: 'curious', tags: ['magic', 'tiny'], fears: ['scary', 'creepy'], hunts: ['flower', 'tooth'], special: 'sparkle', say: ['*twinkle*', 'Wish granted!', 'Tee hee!'], flyMin: 0.15, flyMax: 0.8, heldMood: 'happy' });
+  C('mermaid', { t: D.humanoid({ fishTail: true, hair: 'long', size: 70 }), aliases: ['merman', 'siren', 'ariel', 'mermaids'], move: 'flop', speed: 60, mass: 3, temper: 'curious', tags: ['magic', 'fish'], fears: ['shark', 'scary'], hunts: ['fish', 'treasure'], say: ['*splash*', 'Hi!', 'Where\'s the water?'], heldMood: 'happy' });
+  C('genie', { t: D.humanoid({ hair: 'ponytail', beard: 'short', bigHead: true, size: 75 }), aliases: ['djinn'], move: 'fly', speed: 120, mass: 3, temper: 'curious', tags: ['magic'], special: 'sparkle', say: ['Three wishes!', 'Your wish is my command!', 'Phenomenal cosmic power!'], flyMin: 0.2, flyMax: 0.7, heldMood: 'happy' });
+  const snowmanT = {
+    w: 44, h: 76, draw(p, e, t) {
+      p.line(-12, -4, -26, -14); p.line(12, -4, 26, -14);
+      p.circle(0, 20, 17, true); p.circle(0, -4, 13, true); p.circle(0, -25, 10, true);
+      p.dot(0, -2, 1.5); p.dot(0, 5, 1.5); p.dot(0, 12, 1.5);
+      p.rect(-8, -44, 16, 10, true); p.line(-13, -34, 13, -34);
+      D.eye(p, -3.5, -27, 1.6, e, -1); D.eye(p, 3.5, -27, 1.6, e, 1);
+      p.poly([0, -23, 0, -20, 10, -21], '#000');
+      p.arc(0, -25, 6, 0.5, Math.PI - 0.5);
+    }
+  };
+  C('snowman', { t: snowmanT, aliases: ['snow man', 'frosty', 'olaf'], move: 'none', mass: 6, temper: 'neutral', tags: ['snow', 'cold'], special: 'meltable', fears: ['fire', 'sun'], say: ['Brrr!', 'Happy holidays!', 'Do I look cool?', 'I like warm hugs'] });
+  // heroes don't run from monsters
+  for (const n of SB.ORDER) { const d = SB.DEFS[n]; if (d.tags.includes('hero')) { d.fears = d.fears.filter(f => !['scary', 'predator', 'creepy'].includes(f)); } }
+  C('teddy bear', { t: D.humanoid({ size: 40, headR: 11, earsRound: true, fur: true, bigHead: true, hair: 'bald' }), aliases: ['teddy', 'stuffed animal', 'plush', 'plushie', 'stuffed bear'], move: 'none', mass: 0.5, tags: ['toy', 'soft'], bounce: 0.1, say: ['...', '*hug*'], heldMood: 'happy' });
+})();

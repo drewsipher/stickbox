@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Stickbox — a stick figure sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=20261023a">
+</head>
+<body>
+  <div id="bar">
+    <span id="logo">Stickbox</span>
+    <input id="word" type="text" placeholder="Type anything... dog, dragon, race car, giant angry cat" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40">
+    <button id="go" type="button">Create!</button>
+    <button id="random" type="button" title="Make something random">Random</button>
+    <button id="battle" type="button" title="Creatures attack everything except their own kind">Battle: ON</button>
+    <button id="clearKo" type="button" title="Sweep all knocked-out creatures into the trash">Clear K.O.</button>
+    <button id="bossBtn" type="button" title="Summon a giant boss">Bosses</button>
+    <button id="soundBtn" type="button" title="Turn sound effects on or off">Sound: ON</button>
+    <button id="poopBtn" type="button" title="Turn poop on or off (switch it off for younger kids)">Poop: ON</button>
+    <button id="clear" type="button" title="Remove everything">Clear</button>
+    <button id="helpBtn" type="button" title="Words &amp; help">? Words</button>
+  </div>
+  <div id="suggest"></div>
+  <div id="toast" hidden></div>
+  <div id="help" hidden>
+    <div id="helpBox">
+      <button id="closeHelp" type="button">×</button>
+      <h2>How to play</h2>
+      <ul>
+        <li><b>Type a word</b> and press Enter to make it appear. Try adjectives: <i>giant dog</i>, <i>tiny flying pig</i>, <i>angry robot</i>, <i>sleepy cat</i>.</li>
+        <li><b>Drag</b> things around, <b>throw</b> them by letting go while moving fast, <b>click</b> them to poke.</li>
+        <li><b>Drop</b> anything on the <b>trash can</b> (bottom right) to delete it. Or hover and press Delete.</li>
+        <li>Creatures watch your cursor. Shy ones run, friendly ones follow, scary ones chase!</li>
+        <li><b>Battle mode</b> (the Battle button): every creature attacks everything that isn't its own kind. Hits take health, and a creature with none left is knocked out and lies down. <b>Click</b> a knocked-out creature to revive it, drop it in the trash, or press <b>Clear K.O.</b> to sweep them all away. Switch the button off for a peaceful sandbox.</li>
+        <li><b>Bosses</b> (the Bosses button): five giant monsters with signature attacks and lots of health. Each one has a weakness; the boss panel tells you what it is.</li>
+        <li>Try: bomb, trampoline, dragon, zombie, fire, rain cloud, tornado, ufo, black hole, present, potion, cannon...</li>
+      </ul>
+      <h3>Words I don't know yet</h3>
+      <p class="small">Anything you type that the game doesn't recognize is saved here (in this browser) so it can be added later.</p>
+      <div id="wishList" class="words"></div>
+      <div class="row"><button id="wishCopy" type="button">Copy list</button><button id="wishDownload" type="button">Download list</button><button id="wishClear" type="button">Clear list</button></div>
+      <h3>Adjectives</h3>
+      <div id="adjList" class="words"></div>
+      <div id="wordList"></div>
+    </div>
+  </div>
+  <div id="bosses" hidden>
+    <div id="bossBox">
+      <button id="closeBosses" type="button">×</button>
+      <h2>Bosses</h2>
+      <p class="small">Giant, powerful and very grumpy. Click one to summon it. Every boss has a weakness &mdash; use it! Bombs, cannons, lasers and armies of knights help too.</p>
+      <div id="bossCards"></div>
+    </div>
+  </div>
+  <canvas id="c"></canvas>
+
+  <script src="js/pen.js?v=20261023a"></script>
+  <script src="js/draw.js?v=20261023a"></script>
+  <script src="js/draw2.js?v=20261023a"></script>
+  <script src="js/dictionary.js?v=20261023a"></script>
+  <script src="js/words-animals.js?v=20261023a"></script>
+  <script src="js/words-people.js?v=20261023a"></script>
+  <script src="js/words-vehicles.js?v=20261023a"></script>
+  <script src="js/words-items.js?v=20261023a"></script>
+  <script src="js/bosses.js?v=20261023a"></script>
+  <script src="js/colors.js?v=20261023a"></script>
+  <script src="js/entity.js?v=20261023a"></script>
+  <script src="js/sound.js?v=20261023a"></script>
+  <script src="js/game.js?v=20261023a"></script>
+</body>
+</html>

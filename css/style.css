@@ -1,0 +1,53 @@
+:root { --ink: #000; --paper: #fff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink);
+  font-family: 'Patrick Hand', 'Comic Sans MS', 'Chalkboard SE', 'Segoe Print', cursive; -webkit-user-select: none; user-select: none; }
+#bar { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 2.5px solid var(--ink); background: var(--paper); flex-wrap: wrap; }
+#logo { font-size: 26px; font-weight: bold; letter-spacing: 1px; padding: 0 6px; transform: rotate(-3deg); }
+#word { flex: 1 1 260px; min-width: 160px; font: inherit; font-size: 22px; padding: 6px 12px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); outline: none;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; }
+#word:focus { box-shadow: 3px 3px 0 var(--ink); }
+button { font: inherit; font-size: 18px; padding: 5px 14px; border: 2.5px solid var(--ink); background: var(--paper); color: var(--ink); cursor: pointer;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; }
+button:hover { background: var(--ink); color: var(--paper); }
+button:active { transform: translate(1px, 1px); }
+#suggest { position: absolute; left: 10px; right: 10px; top: 58px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 5; pointer-events: none; }
+#suggest .chip { pointer-events: auto; }
+.chip { font-size: 16px; padding: 2px 10px; border-width: 2px; }
+#toast { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 6; font-size: 20px; padding: 6px 16px; border: 2.5px solid var(--ink); background: var(--paper);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#toast.show { opacity: 1; }
+#help[hidden] { display: none; }
+#help { position: absolute; inset: 0; z-index: 10; background: rgba(255,255,255,0.85); display: flex; align-items: flex-start; justify-content: center; padding: 60px 10px 10px; overflow: auto; }
+#helpBox { position: relative; max-width: 820px; width: 100%; background: var(--paper); border: 2.5px solid var(--ink); padding: 18px 22px; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; box-shadow: 5px 5px 0 var(--ink); }
+#helpBox h2 { margin: 0 0 8px; font-size: 30px; }
+#helpBox h3 { margin: 14px 0 6px; font-size: 22px; border-bottom: 2px solid var(--ink); }
+#helpBox ul { margin: 0; padding-left: 20px; font-size: 18px; line-height: 1.4; }
+#closeHelp { position: absolute; right: 10px; top: 8px; font-size: 24px; padding: 0 12px; line-height: 1.2; }
+.words { display: flex; flex-wrap: wrap; gap: 6px; }
+canvas { display: block; touch-action: none; }
+@media (max-width: 600px) { #logo { display: none; } #word { font-size: 18px; } button { font-size: 15px; padding: 4px 10px; } }
+#helpBox p.small { margin: 0 0 8px; font-size: 16px; opacity: 0.8; }
+#helpBox .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.chip.wish { cursor: default; display: inline-block; border: 2px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; font-size: 16px; padding: 2px 10px; }
+.chip.wish:hover { background: var(--paper); color: var(--ink); }
+#battle.on { background: var(--ink); color: var(--paper); }
+#battle.on:hover { background: var(--paper); color: var(--ink); }
+#bosses[hidden] { display: none; }
+#bosses { position: absolute; inset: 0; z-index: 10; background: rgba(255,255,255,0.85); display: flex; align-items: flex-start; justify-content: center; padding: 60px 10px 10px; overflow: auto; }
+#bossBox { position: relative; max-width: 960px; width: 100%; background: var(--paper); border: 2.5px solid var(--ink); padding: 18px 22px; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; box-shadow: 5px 5px 0 var(--ink); }
+#bossBox h2 { margin: 0 0 8px; font-size: 30px; }
+#bossBox p.small { margin: 0 0 12px; font-size: 16px; opacity: 0.8; }
+#closeBosses { position: absolute; right: 10px; top: 8px; font-size: 24px; padding: 0 12px; line-height: 1.2; }
+#bossCards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.bossCard { border: 2.5px solid var(--ink); border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; padding: 8px 8px 10px; text-align: center; cursor: pointer; background: var(--paper); }
+.bossCard:hover { box-shadow: 4px 4px 0 var(--ink); transform: translate(-1px, -1px); }
+.bossCard:active { box-shadow: none; transform: translate(1px, 1px); }
+.bossCard canvas { width: 100%; height: auto; display: block; }
+.bossCard b { display: block; font-size: 22px; text-transform: capitalize; }
+.bossCard .power { display: block; font-size: 15px; line-height: 1.25; opacity: 0.85; margin-top: 2px; }
+.bossCard .weak { display: block; font-size: 14px; margin-top: 6px; padding-top: 4px; border-top: 1.5px dashed var(--ink); }
+#soundBtn.on { background: var(--ink); color: var(--paper); }
+#soundBtn.on:hover { background: var(--paper); color: var(--ink); }
+#poopBtn.on { background: var(--ink); color: var(--paper); }
+#poopBtn.on:hover { background: var(--paper); color: var(--ink); }
