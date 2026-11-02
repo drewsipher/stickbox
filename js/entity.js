@@ -54,6 +54,7 @@
       this.whipT = 0; this.charge = 0; this.laserT = 0; this.beatT = 0; this.poundT = 0; this.swatT = 0; this.swatCd = 0; this.throwT = 0; this.regenT = 0; this.spitT = 0; this.eggT = 6; this.galeT = 3; this.gustT = 0; this.galeId = 0; this.gustId = -1; // boss attack timers
       this.webT = 0; this.frozenT = 0; this.poisonT = 0; this.poisonTick = 0; this.poisonBy = null; // wrapped in a web / frozen solid / poisoned
       this.koAngle = 0; this.attacker = null; this.armed = true; this.snapT = 0; this.onFire = 0; this.fireTick = 0; this.fireSrc = null; this.panicT = 0; this.panicDir = 1;
+      this.strikeT = 0; this.slashT = 0; this.grabbed = null; this.grabT = 0; this.grabTick = 0; this.camo = 0; this.calmT = 0; this.ambushT = 0; this.leapCd = 2; this.leapT = 0; this.prevHp = null; // mantis
       this.chargeT = 0; this.pawT = 0; this.rearT = 0; this.hitIds = null;                                       // bull
       this.stingQ = 0; this.stingQT = 0; this.clawT = 0; this.clawCd = 0; this.tailT = [0, 0, 0]; this.tailHit = [false, false, false]; this.tips = null; // scorpion
       this.hitT = 0; this.lungeT = 0; this.lungeDir = 1; this.hpShown = this.hp;                                // fight animation
@@ -69,6 +70,14 @@
       this.opened = false; this.face = 1 + Math.floor(Math.random() * 6); this.ring = 0; this.flash = 0; this.squash = 0;
       this.meltT = 0; this.burnT = 0; this.wantVx = 0; this.wantVy = null; this.wantJump = false;
       this.mods = mods;
+      // ordinary people come in many skin tones and hair colours (characters with a set look keep it)
+      if (def.cat === 'person' && def.pal && def.palFixed && !def.palFixed.skin && !mods.zombie) {
+        const SKINS = ['#f6d3b0', '#eebf94', '#e0a878', '#c68a5c', '#a06a43', '#7c4f31', '#5e3a24', '#f3c6a5'];
+        const HAIRS = ['#5b3a1a', '#2b1d12', '#1a1a1a', '#8a5a2b', '#d9b25b', '#b5502a', '#3d2817'];
+        const r = Math.floor(this.seed * 97);
+        this.pal = Object.assign({}, def.pal, { skin: SKINS[r % SKINS.length] });
+        if (!def.palFixed.hair) this.pal.hair = HAIRS[Math.floor(r / 7) % HAIRS.length];
+      }
       if (mods.dizzy) this.dizzy = 3;
     }
     get left() { return this.x - this.w / 2; }
@@ -93,10 +102,12 @@
     for (let i = 0; i < ents.length; i++) {
       const o = ents[i];
       if (o === e || !o.alive || o.dying || o.ko || o.held && o.creature === false) continue;
+      if (o.invisible) continue;   // nobody can see an invisible guy: not to chase, not to run from
       const dx = o.x - e.x, dy = o.y - e.y;
       const d = Math.sqrt(dx * dx + dy * dy) - o.w * 0.5;
       if (battle) {
         // fight anything that isn't the same kind of creature; prefer creatures, natural prey and whoever hit us last
+        if (o.camo > 0.5 && d > 150) continue;
         if (SB.kin(e, o) || o.static || (o.noCollide && !o.creature) || o === e.victim) continue;
         let wgt = o.creature ? 1 : 2.2;
         if (SB.matches(o, e.hunts)) wgt *= 0.6;
@@ -115,14 +126,30 @@
     e.moodT -= dt; if (e.moodT <= 0) e.tmpMood = null;
     e.jumpCd -= dt; e.atkT -= dt; e.victimT -= dt; if (e.victimT <= 0) e.victim = null;
     if (!e.alive || e.held || e.dying || e.static || e.ko) { e.moving = false; return; }
+    if (e.controlled) e.sleeping = false, e.ambushT = 0;
     if (e.dizzy > 0 || e.sleeping || e.move === 'none' || e.spawnT < 0.15) { e.moving = false; return; }
     if (e.charge > 0 || e.beatT > 0 || e.poundT > 0 || e.throwT > 0 || e.whipT > 0) { e.moving = false; return; } // winding up an attack: stand still
     if (e.webT > 0 || e.frozenT > 0) { e.moving = false; return; } // wrapped in a web or frozen solid: can't move
-    if (e.pawT > 0 || e.rearT > 0 || e.stingQ > 0 || e.clawT > 0) { e.moving = false; return; } // pawing, rearing, stinging, pinching: stand still
-    if (e.chargeT > 0) { e.wantVx = e.facing * (e.def.chargeSpeed || 650) * (e.poisonT > 0 ? 0.6 : 1); e.moving = true; e.mode = 'hunt'; return; } // charging: full speed ahead
+    if (e.pawT > 0 || e.rearT > 0 || e.stingQ > 0 || e.clawT > 0 || e.strikeT > 0 || e.slashT > 0 || e.grabbed || e.ambushT > 0) { e.moving = false; return; } // pawing, rearing, stinging, pinching: stand still
+    if (e.chargeT > 0) { e.wantVx = e.facing * (e.def.chargeSpeed || 650) * (e.poisonT > 0 ? 0.6 : 1); e.moving = true; e.mode = 'hunt'; return; }
+    if (e.controlled) {   // the player is driving: arrows / WASD move, up jumps (or flies up), down flies down
+      const k = W.ctrl, dir = (k.right ? 1 : 0) - (k.left ? 1 : 0), sp = (e.speed > 0 ? e.speed : 120) * (e.poisonT > 0 ? 0.55 : 1);
+      e.mode = e.ctrlTargetT > 0 ? 'hunt' : 'wander';
+      if (e.ctrlTargetT <= 0) e.target = null;
+      e.threat = null;
+      const jump = k.up || k.jumpQ > 0;
+      if (e.move === 'fly' || e.move === 'float') { e.wantVx = dir * sp * 1.3; e.wantVy = ((k.down ? 1 : 0) - (k.up ? 1 : 0)) * sp * 1.1; }
+      else if (e.move === 'hop' || e.move === 'flop') { if (e.grounded && (dir || jump)) { e.vx = dir * sp; e.vy = -e.jump * (jump ? 1.1 : 0.7); e.grounded = false; k.jumpQ = 0; } e.wantVx = e.grounded ? 0 : e.vx; }
+      else { e.wantVx = dir * sp * 1.35; if (jump && e.grounded) { e.wantJump = true; e.jumpCd = 0; k.jumpQ = 0; } }
+      if (dir) { e.facing = dir; e.dir = dir; }
+      e.moving = !!dir;
+      return;
+    } // charging: full speed ahead
     if (e.breath > 0 && e.def.boss) { e.moving = false; return; } // breathing fire/ice: stand still
     e.scanT -= dt;
     if (e.scanT <= 0) { e.scanT = 0.25 + Math.random() * 0.2; SB.scan(e, W); }
+    if (e.target && e.target.invisible) e.target = null;   // lost sight of it
+    if (e.threat && e.threat.invisible) e.threat = null;
     const cur = W.cursor, t = W.time;
     const dxC = cur.x - e.x, dyC = cur.y - e.y, dC = Math.sqrt(dxC * dxC + dyC * dyC);
     const range = 90 + e.h * 0.8;

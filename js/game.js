@@ -155,7 +155,7 @@
     v.hp -= dmg;
     W.hitFx(v, dmg, by, dmg >= 3, o.col, o.soft);
     if (!o.quiet) v.say(pick(['Ouch!', 'Argh!', 'Oof!', 'Hey!']));
-    if (by && by.alive && by !== v && !SB.kin(v, by)) {
+    if (by && by.alive && by !== v && !SB.kin(v, by) && !by.invisible) {   // can't fight back against someone you can't see
       if (SB.battle) { v.attacker = by; v.target = by; v.victim = null; v.scanT = 0.6; v.setMood('angry', 1.5); }
       else { v.threat = by; v.setMood('scared', 2); v.scanT = 1; }
     }
@@ -182,7 +182,7 @@
       if (o.special === 'bomb') o.fuse = Math.min(o.fuse, 0.3);
     }
     W.particle('ring', x, y, { life: 0.45, size: r }); W.sfx('stomp', x);
-    if (SB.swarmCrush) SB.swarmCrush(x, y, r * 0.6);
+    if (SB.swarmCrush) SB.swarmCrush(x, y, r * 0.6, src);   // a beetle king doesn't squash his own beetles
     W.burst('puff', x, y, 10, 220, { size: 9, life: 0.6 });
   };
   // a web lands on someone: they're stuck for a few seconds (click them to free them)
@@ -244,6 +244,7 @@
 
   // ---------- catching things ----------
   function catchTarget(A, B) {
+    if (A.def.noBonk) return;   // fights only with its own special attacks (the mantis)
     if (A.victim === B || A.victimT > 0 && A.victim === B) return;
     A.victim = B; A.victimT = SB.battle ? 1.4 : 2.5; A.target = null; A.scanT = 0.5;
     if (SB.matches(B, A.eats) && !B.held) {
@@ -263,6 +264,73 @@
     }
     bonk(A, B);
   }
+  // ---------- player control ----------
+  W.ctrl = { e: null, left: false, right: false, up: false, down: false, pick: false, atkCd: 0 };
+  const FOE_SPECIALS = ['tentacles', 'laser', 'pound', 'hydra', 'lob', 'webshot', 'moth', 'frost', 'spitvenom', 'bullcharge', 'scorpion', 'mantis', 'firebreath', 'swarm', 'smite', 'reap'];
+  W.takeControl = function (e) {
+    if (!e || !e.creature || !e.alive || e.dying || e.static) { W.toast('Pick a creature, person, animal or boss to control.', 2); return; }
+    W.releaseControl(true);
+    W.ctrl.e = e; e.controlled = true; e.target = null; e.threat = null; e.sleeping = false;
+    W.ctrl.left = W.ctrl.right = W.ctrl.up = W.ctrl.down = false;
+    const inp = document.getElementById('word'); if (inp) inp.blur();
+    W.sfx('spawn', e.x); W.burst('sparkle', e.x, e.y, 10, 120, { size: 5, life: 0.7 });
+    e.say(pick(['Ready!', 'Let\'s go!', 'What now, boss?', 'I\'m all yours!']));
+    W.toast((e.move === 'none' ? 'You control the ' + e.def.name + ' (it can\'t walk, but it can attack). ' : 'You control the ' + e.def.name + '! ') + 'Arrows/WASD move · Up/Space jump · F attack · E special · Esc let go', 4);
+    W.updateCtrlUI();
+  };
+  W.releaseControl = function (quiet) {
+    const e = W.ctrl.e; W.ctrl.e = null; W.ctrl.pick = false;
+    if (e) { e.controlled = false; e.ctrlTargetT = 0; e.scanT = 0; if (!quiet) W.toast('Let go of the ' + e.def.name + '.', 1.5); }
+    W.updateCtrlUI();
+  };
+  // nearest creature in front of the controlled one, within range
+  function inFront(e, range) {
+    let best = null, bd = Infinity;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || !o.creature || o.ko || o.held) continue;
+      const dx = (o.x - e.x) * e.facing;
+      if (dx < -o.w * 0.3 || dx > range + o.w * 0.5) continue;
+      const dy = Math.abs(o.y - e.y);
+      if (dy > (e.h + o.h) * 0.5 + 40) continue;
+      const d = Math.abs(dx) + dy * 0.5;
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+  // F: a melee hit on whatever is right in front
+  W.ctrlAttack = function () {
+    const e = W.ctrl.e; if (!e || e.ko || e.dying || W.ctrl.atkCd > 0) return;
+    W.ctrl.atkCd = e.def.boss ? 0.45 : 0.35;
+    const v = inFront(e, e.w * 0.5 + 40);
+    if (v) { e.victim = null; bonk(e, v); if (SB.matches(v, e.eats) && v.mass < e.mass * 0.8 && v.hp <= 0) W.remove(v, 'eaten'); }
+    else { e.lungeT = 0.24; e.lungeDir = e.facing; W.sfx('swing', e.x); }
+  };
+  // E: the creature's own special attack, aimed at the nearest thing in front; others pounce
+  W.ctrlSpecial = function () {
+    const e = W.ctrl.e; if (!e || e.ko || e.dying || W.ctrl.atkCd > 0) return;
+    W.ctrl.atkCd = 0.6;
+    const v = inFront(e, 900);
+    if (FOE_SPECIALS.includes(e.special)) {
+      if (!v) { e.say('Nothing to attack!'); return; }
+      e.target = v; e.ctrlTargetT = 2; e.facing = v.x >= e.x ? 1 : -1;
+      // ready the attack right now
+      e.specT = 0; e.galeT = 0; e.leapCd = 0; e.clawCd = 0; e.swatCd = 0; e.breath = Math.min(e.breath, 0);
+      if (e.special === 'smite') e.specT = 99;
+      return;
+    }
+    // no special of its own: a pouncing leap at whatever is ahead
+    if (!e.grounded && !e.flying) return;
+    e.vx = e.facing * Math.max(380, (e.speed || 120) * 2.6); e.vy = e.flying ? -100 : -460; e.grounded = false;
+    if (v) { e.target = v; e.ctrlTargetT = 1.2; e.victim = null; }
+    e.say(pick(['HYAAA!', 'Pounce!', 'Take that!'])); W.sfx('whoosh', e.x);
+  };
+  W.updateCtrlUI = function () {
+    const b = document.getElementById('ctrlBtn'), pad = document.getElementById('pad');
+    if (b) { b.textContent = W.ctrl.e ? 'Let go' : W.ctrl.pick ? 'Pick one...' : 'Control'; b.classList.toggle('on', !!W.ctrl.e || W.ctrl.pick); }
+    if (pad) pad.hidden = !W.ctrl.e;
+    if (canvas) canvas.style.cursor = W.ctrl.pick ? 'crosshair' : 'default';
+  };
+
   function bonk(A, B) {
     const dir = B.x >= A.x ? 1 : -1;
     const power = clamp(Math.sqrt(A.mass / Math.max(0.1, B.mass)), 0.4, 2.2);
@@ -275,7 +343,8 @@
     if (A.special === 'reap' && B.creature) { dmg = Math.max(dmg, B.hp); A.say('Reaped!'); }
     if (B.creature) B.hp -= dmg;
     W.hitFx(B, B.creature ? dmg : 0, A, power > 1.3 || !!A.def.boss || dmg >= 3);
-    if (SB.battle) { B.say(pick(['Ouch!', 'Hey!', 'Grr!', 'Oof!', 'Take that!', 'You\'ll pay!'])); B.setMood('angry', 1.5); B.attacker = A; B.target = A; B.victim = null; B.scanT = 0.6; }
+    if (A.invisible) { B.say(pick(['Who did that?!', 'Huh?!', 'Something hit me!', 'Ow! Where are you?!'])); B.setMood('scared', 1.5); }   // can't see who hit it
+    else if (SB.battle) { B.say(pick(['Ouch!', 'Hey!', 'Grr!', 'Oof!', 'Take that!', 'You\'ll pay!'])); B.setMood('angry', 1.5); B.attacker = A; B.target = A; B.victim = null; B.scanT = 0.6; }
     else { B.say(pick(['Ouch!', 'Yikes!', 'Eek!', 'Help!', 'Hey!'])); B.setMood('scared', 2); B.threat = A; B.scanT = 1; }
     if (power > 1.3) B.dizzy = Math.max(B.dizzy, 1.2);
     A.say(pick(A.def.roar || A.def.say)); A.setMood(A.tags.has('hero') || A.tags.has('pet') ? 'happy' : 'angry', 1);
@@ -657,7 +726,7 @@
         e.specT += dt;
         if (e.specT > 4.5) {
           let best = null, bd = 520;
-          for (const o of W.entities) { if (o === e || !o.alive || o.dying || o.ko || !o.creature) continue; if (!(o.tags.has('villain') || o.tags.has('scary') || o.tags.has('undead') || o.temper === 'hostile')) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = o; } }
+          for (const o of W.entities) { if (o === e || !o.alive || o.dying || o.ko || !o.creature || o.invisible) continue; if (!(o.tags.has('villain') || o.tags.has('scary') || o.tags.has('undead') || o.temper === 'hostile')) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = o; } }
           if (best) {
             e.specT = 0; e.say(pick(['SMITE!', 'Begone!', 'Behold my wrath!'])); e.setMood('angry', 1.5);
             W.particle('beamline', e.x + e.facing * 10, e.y, { life: 0.3, size: 0, tx: best.x, ty: best.top });
@@ -751,10 +820,12 @@
   // ---------- per-frame entity bookkeeping ----------
   function updateEntity(e, dt) {
     e.age += dt;
+    if (e.ctrlTargetT > 0) { e.ctrlTargetT -= dt; if (e.ctrlTargetT <= 0) { e.target = null; e.mode = 'wander'; } }
     if (e.spawnT < 1) e.spawnT = Math.min(1, e.spawnT + dt * 3.5);
     if (e.bubble) { e.bubble.t -= dt; if (e.bubble.t <= 0) e.bubble = null; }
     if (e.burnT > 0) e.burnT -= dt;
     if (e.hitT > 0) e.hitT -= dt;
+    if (e.def.boss && !e.ko && Math.random() < dt * 7) W.particle('mist', e.x + (Math.random() - 0.5) * e.w * 0.8, e.bottom - 6, { vx: (Math.random() - 0.5) * 24, vy: -12 - Math.random() * 10, life: 1.8, size: 14 + Math.random() * 16 });
     if (e.stinky > 0) { e.stinky -= dt; if (Math.random() < dt * 4) W.particle('stink', e.x + (Math.random() - 0.5) * e.w * 0.6, e.top, { vy: -35, life: 1.4, size: 8 + e.h * 0.25 }); }
     if (e.lungeT > 0) e.lungeT -= dt;
     if (e.hpShown == null) e.hpShown = e.hp;
@@ -844,6 +915,7 @@
     W.cursor.x = p.x; W.cursor.y = p.y; W.cursor.in = true; W.cursor.down = true;
     canvas.setPointerCapture && canvas.setPointerCapture(ev.pointerId);
     const e = topmostAt(p.x, p.y);
+    if (W.ctrl.pick) { W.ctrl.pick = false; if (e && e.creature) W.takeControl(e); else { W.toast('Control cancelled.', 1.2); W.updateCtrlUI(); } pressInfo = null; return; }
     if (!e && SB.swat && SB.swat(p.x, p.y)) { pressInfo = null; return; }   // clicked on wasps: swat them
     pressInfo = { x: p.x, y: p.y, t: W.time, e, moved: false };
     if (e) {
@@ -1003,7 +1075,33 @@
     }
     const adj = document.getElementById('adjList');
     for (const m of ['giant', 'tiny', 'flying', 'angry', 'happy', 'scared', 'fast', 'slow', 'sleepy', 'bouncy', 'invisible', 'zombie', 'magic', 'baby', 'heavy']) { const b = document.createElement('button'); b.className = 'chip'; b.textContent = m; b.type = 'button'; b.addEventListener('click', () => { input.value = m + ' '; input.focus(); renderSuggest(); }); adj.appendChild(b); }
+    // keyboard control of the creature you are driving
+    const CK = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'up', w: 'up', W: 'up', ' ': 'up', ArrowDown: 'down', s: 'down', S: 'down' };
     window.addEventListener('keydown', ev => {
+      if (W.ctrl.e && document.activeElement !== input) {
+        if (CK[ev.key]) { W.ctrl[CK[ev.key]] = true; if (CK[ev.key] === 'up' && !ev.repeat) W.ctrl.jumpQ = 0.2; ev.preventDefault(); return; }
+        if (ev.key === 'f' || ev.key === 'F' || ev.key === 'j' || ev.key === 'J') { W.ctrlAttack(); ev.preventDefault(); return; }
+        if (ev.key === 'e' || ev.key === 'E' || ev.key === 'k' || ev.key === 'K') { W.ctrlSpecial(); ev.preventDefault(); return; }
+        if (ev.key === 'Escape') { W.releaseControl(); ev.preventDefault(); return; }
+        if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey) { ev.preventDefault(); return; }   // don't start typing while driving
+      }
+    });
+    window.addEventListener('keyup', ev => { if (CK[ev.key]) W.ctrl[CK[ev.key]] = false; });
+    window.addEventListener('blur', () => { W.ctrl.left = W.ctrl.right = W.ctrl.up = W.ctrl.down = false; });
+    canvas.addEventListener('dblclick', ev => { const p = cursorPos(ev); const e = topmostAt(p.x, p.y); if (e && e.creature && e !== W.ctrl.e) W.takeControl(e); });
+    document.getElementById('ctrlBtn').addEventListener('click', () => {
+      if (W.ctrl.e || W.ctrl.pick) { W.releaseControl(); return; }
+      W.ctrl.pick = true; W.updateCtrlUI(); W.toast('Click a creature, person, animal or boss to control it.', 3);
+    });
+    // touch pad: hold a button to keep moving
+    for (const b of document.querySelectorAll('#pad [data-k]')) {
+      const k = b.dataset.k;
+      const on = ev => { ev.preventDefault(); if (k === 'up') W.ctrl.jumpQ = 0.2; if (k === 'attack') W.ctrlAttack(); else if (k === 'special') W.ctrlSpecial(); else if (k === 'release') W.releaseControl(); else W.ctrl[k] = true; };
+      const off = ev => { ev.preventDefault(); if (W.ctrl[k] === true) W.ctrl[k] = false; };
+      b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
+    }
+    window.addEventListener('keydown', ev => {
+      if (W.ctrl.e && document.activeElement !== input) return;
       if (document.activeElement === input) return;
       if (ev.key === 'Delete' || ev.key === 'Backspace') { const e = W.held || W.hoverE; if (e) { W.remove(e, 'poof'); ev.preventDefault(); } }
       else if (ev.key.length === 1 && /[a-z0-9 ]/i.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) { input.focus(); input.value += ev.key; renderSuggest(); ev.preventDefault(); }
@@ -1037,7 +1135,7 @@
         const s = Math.min((CARD - 24) / c.def.w, (CARD - 30) / c.def.h);
         cx.save(); cx.translate(CARD / 2, CARD / 2 + 6); cx.scale(s, s);
         cx.lineWidth = 3.2 / Math.sqrt(Math.max(0.5, s));
-        c.pen.begin(c.fake.seed, boil); c.pen.wobble = 1.1 / Math.sqrt(Math.max(0.5, s)); c.pen.setPalette(c.def.pal, c.def.seq);
+        c.pen.begin(c.fake.seed, boil); c.pen.wobble = 1.1 / Math.sqrt(Math.max(0.5, s)); c.pen.setPalette(c.def.pal, c.def.seq); c.pen.shading = true; SB.realistic(c.pen, c.def); cx.lineWidth *= 0.65;
         c.def.draw(c.pen, c.fake, t); c.pen.setPalette(null);
         cx.restore();
       }
@@ -1049,31 +1147,60 @@
   }
 
   // ---------- rendering ----------
-  function drawBackground(t) {
-    const gy = W.groundY;
-    pen.begin(7, boil);
-    // sky
-    const sky = ctx.createLinearGradient(0, 0, 0, gy); sky.addColorStop(0, '#bfe0ff'); sky.addColorStop(1, '#f2f9ff');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W.W, gy);
-    // distant hills
-    ctx.fillStyle = '#d5efc2'; ctx.strokeStyle = '#a9d59a'; ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.moveTo(-40, gy); ctx.quadraticCurveTo(W.W * 0.22, gy - 130, W.W * 0.5, gy); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W.W * 0.4, gy); ctx.quadraticCurveTo(W.W * 0.7, gy - 180, W.W + 40, gy); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // ground: grass, then earth
-    ctx.fillStyle = '#9fd484'; ctx.fillRect(0, gy, W.W, W.H - gy);
-    ctx.fillStyle = '#c99a63'; ctx.fillRect(0, gy + 26, W.W, W.H - gy);
-    ctx.strokeStyle = '#3f7d3a'; ctx.lineWidth = 2.6;
-    pen.line(-10, gy, W.W + 10, gy);
-    // grass tufts
-    ctx.strokeStyle = '#3f8f3f'; ctx.lineWidth = 1.8;
-    const n = Math.floor(W.W / 46);
-    for (let i = 0; i <= n; i++) {
-      const x = i * 46 + ((i * 37) % 23); const s = 4 + (i % 3) * 2;
-      pen.line(x - s, gy, x - s * 0.4, gy - s * 1.6); pen.line(x - s * 0.4, gy - s * 1.6, x + s * 0.2, gy); pen.line(x + s * 0.4, gy, x + s * 1.1, gy - s * 1.3);
+  // the scenery is painted once into an off-screen image (rebuilt on resize); only the clouds move
+  function paintScenery() {
+    const dpr = W.dpr, cv = W.bgCanvas || (W.bgCanvas = document.createElement('canvas'));
+    cv.width = Math.max(1, Math.floor(W.W * dpr)); cv.height = Math.max(1, Math.floor(W.H * dpr));
+    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const gy = W.groundY, Wd = W.W, rnd = (i) => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+    // sky: deep blue overhead, hazy pale at the horizon, a warm glow low down
+    let gr = x.createLinearGradient(0, 0, 0, gy); gr.addColorStop(0, '#5f9fd9'); gr.addColorStop(0.55, '#a9d1f2'); gr.addColorStop(0.9, '#e4f0f7'); gr.addColorStop(1, '#f6efe0');
+    x.fillStyle = gr; x.fillRect(0, 0, Wd, gy + 2);
+    // far mountains (blue haze), nearer mountains
+    const ridge = (base, amp, seed, col, step) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, gy); for (let px = 0; px <= Wd + step; px += step) { const h = amp * (0.55 + 0.45 * Math.sin(px * 0.004 + seed) * Math.cos(px * 0.0023 + seed * 2)) + rnd(px + seed) * amp * 0.12; x.lineTo(px, base - h); } x.lineTo(Wd, gy); x.closePath(); x.fill(); };
+    ridge(gy - 40, 150, 1.3, '#9db7cf', 18);
+    ridge(gy - 20, 95, 4.1, '#8aa98f', 14);
+    // rolling hills with a fringe of trees
+    const hill = (cx, w, h, col, treeCol) => {
+      x.fillStyle = col; x.beginPath(); x.moveTo(cx - w, gy); x.quadraticCurveTo(cx, gy - h * 2, cx + w, gy); x.closePath(); x.fill();
+      for (let k = 0; k < 34; k++) {                                          // a line of small trees along the crest
+        const u2 = 0.06 + 0.88 * rnd(k * 3 + cx), tx = cx - w + u2 * 2 * w, ty = gy - 4 * h * u2 * (1 - u2) + 3, s2 = 0.6 + rnd(k + cx * 2) * 0.7;
+        x.fillStyle = 'rgba(70,52,34,0.8)'; x.fillRect(tx - 0.8 * s2, ty - 6 * s2, 1.6 * s2, 6 * s2);
+        x.fillStyle = rnd(k + 5) > 0.5 ? treeCol : SB.shade(treeCol, 0.15);
+        if (rnd(k + 9) > 0.45) { x.beginPath(); x.moveTo(tx - 5 * s2, ty - 4 * s2); x.lineTo(tx, ty - 18 * s2); x.lineTo(tx + 5 * s2, ty - 4 * s2); x.closePath(); x.fill(); }
+        else { x.beginPath(); x.arc(tx, ty - 10 * s2, 6 * s2, 0, TAU); x.fill(); }
+      }
+    };
+    hill(Wd * 0.25, Wd * 0.35, 70, '#7fae69', '#5f8f52'); hill(Wd * 0.78, Wd * 0.4, 90, '#76a862', '#557f48');
+    // meadow: gradient grass with blades, then a band of soil
+    gr = x.createLinearGradient(0, gy - 4, 0, gy + 30); gr.addColorStop(0, '#6fb04f'); gr.addColorStop(1, '#4f8a37');
+    x.fillStyle = gr; x.fillRect(0, gy - 1, Wd, 30);
+    gr = x.createLinearGradient(0, gy + 26, 0, W.H); gr.addColorStop(0, '#8a6038'); gr.addColorStop(1, '#5e3f24');
+    x.fillStyle = gr; x.fillRect(0, gy + 26, Wd, W.H - gy);
+    x.lineCap = 'round';
+    for (let i = 0; i < Wd / 2.2; i++) {                                     // grass blades
+      const bx = rnd(i) * Wd, by = gy + 2 + rnd(i + 7) * 24, h = 5 + rnd(i + 3) * 9, lean = (rnd(i + 5) - 0.5) * 6;
+      x.strokeStyle = rnd(i + 9) > 0.5 ? 'rgba(46,105,36,0.75)' : 'rgba(126,186,86,0.8)'; x.lineWidth = 1 + rnd(i + 11);
+      x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + lean * 0.3, by - h * 0.6, bx + lean, by - h); x.stroke();
     }
-    // pebbles in the earth
-    ctx.fillStyle = '#7a5230';
-    for (let i = 0; i < n; i++) { const x = i * 46 + ((i * 53) % 40); ctx.beginPath(); ctx.arc(x, gy + 34 + (i % 4) * 7, 1.6, 0, TAU); ctx.fill(); }
+    for (let i = 0; i < Wd / 14; i++) { const fx = rnd(i + 50) * Wd, fy = gy + 6 + rnd(i + 60) * 18; x.fillStyle = ['#fff', '#ffd23f', '#f28cb1', '#b57edc'][i % 4]; x.beginPath(); x.arc(fx, fy, 1.6, 0, TAU); x.fill(); }   // meadow flowers
+    for (let i = 0; i < Wd / 9; i++) { const sx = rnd(i + 90) * Wd, sy = gy + 32 + rnd(i + 91) * (W.H - gy - 34); x.fillStyle = rnd(i + 92) > 0.5 ? 'rgba(0,0,0,0.25)' : 'rgba(255,230,190,0.25)'; x.beginPath(); x.ellipse(sx, sy, 1.5 + rnd(i + 93) * 2.5, 1 + rnd(i + 94) * 1.5, 0, 0, TAU); x.fill(); }   // pebbles in the soil
+    x.strokeStyle = 'rgba(40,80,30,0.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, gy); x.lineTo(Wd, gy); x.stroke();
+    W.bgKey = Wd + 'x' + W.H + '@' + dpr;
+  }
+  function drawBackground(t) {
+    if (!W.bgCanvas || W.bgKey !== W.W + 'x' + W.H + '@' + W.dpr) paintScenery();
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(W.bgCanvas, 0, 0); ctx.restore();
+    if (W.shakeT > 0) { /* the camera shake translate is re-applied by render after this */ }
+    // soft drifting clouds
+    ctx.save();
+    for (let k = 0; k < 5; k++) {
+      const sp = 6 + k * 3, span = W.W + 400, cx = ((k * 420 + t * sp) % span) - 200, cy = 50 + (k * 67) % 150, s = 0.7 + (k % 3) * 0.35;
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      for (const [dx, dy, r] of [[-40, 6, 26], [-12, -8, 34], [22, -2, 30], [50, 8, 22], [6, 12, 28]]) { ctx.beginPath(); ctx.arc(cx + dx * s, cy + dy * s, r * s, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = 'rgba(160,180,205,0.25)'; ctx.beginPath(); ctx.ellipse(cx + 5 * s, cy + 22 * s, 70 * s, 9 * s, 0, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
     ctx.strokeStyle = '#000';
   }
   function drawBin(t) {
@@ -1103,12 +1230,17 @@
     const hv = (e.hover && !e.held && !e.dying) ? 1.04 : 1;
     ctx.scale(e.scale * st * ds * hv * e.facing * (1 + 0.16 * hk), e.scale * st * ds * hv * (1 - 0.12 * hk));
     if (e.invisible) ctx.globalAlpha = 0.28;
-    ctx.lineWidth = (e.def.boss ? 3.2 : 2.4) / Math.sqrt(Math.max(0.5, e.scale));
+    ctx.lineWidth = (e.def.boss ? 1.9 : 1.5) / Math.sqrt(Math.max(0.5, e.scale));
     pen.begin(e.seed, boil);
-    pen.setPalette(e.def.pal, e.def.seq); pen.tint = e.poisonT > 0 ? '#5fbf6f' : null; if (hk > 0 && Math.floor(hk * 9) % 2 === 0) pen.tint = '#ff2020'; ctx.strokeStyle = '#000';
-    pen.wobble = 1.1 / Math.sqrt(Math.max(0.5, e.scale));
+    pen.setPalette(e.pal || e.def.pal, e.def.seq); pen.shading = true; pen.tint = e.poisonT > 0 ? '#5fbf6f' : null; if (hk > 0 && Math.floor(hk * 9) % 2 === 0) pen.tint = '#ff2020'; ctx.strokeStyle = '#3b322b';
+    SB.realistic(pen, e.def);
     if (e.wingsMod) D.wings(pen, e, t, 0, -e.def.h * 0.15, Math.max(0.5, e.def.h / 70), 'bird', e.flying);
     if (e.special === 'beam' && e.beam > 0) { ctx.save(); ctx.globalAlpha = 0.5 * e.beam; ctx.setLineDash([6, 6]); pen.line(-10, e.def.h / 2, -46, e.def.h / 2 + 300 / e.scale); pen.line(10, e.def.h / 2, 46, e.def.h / 2 + 300 / e.scale); ctx.restore(); }
+    if (e.def.boss && !e.dying) {   // a dark, slowly pulsing aura
+      const R = Math.max(e.def.w, e.def.h) * 0.62, au = ctx.createRadialGradient(0, 0, R * 0.2, 0, 0, R);
+      au.addColorStop(0, 'rgba(20,8,30,' + (0.2 + Math.sin(t * 1.7 + e.seed) * 0.06).toFixed(3) + ')'); au.addColorStop(1, 'rgba(20,8,30,0)');
+      ctx.save(); ctx.fillStyle = au; ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.8, 0, 0, TAU); ctx.fill(); ctx.restore();
+    }
     e.def.draw(pen, e, t);
     if (e.webT > 0) { // cocooned in silk
       const cw = e.def.w * 0.58, ch = e.def.h * 0.56;
@@ -1132,7 +1264,7 @@
       }
     }
     ctx.restore();
-    pen.setPalette(null); pen.tint = null; pen.wobble = 1.1;
+    pen.setPalette(null); pen.tint = null; pen.wobble = 1.1; pen.shading = false; pen.smooth = 0; pen.round = false; pen.inkK = 0.72;
   }
   function drawBubble(e) {
     const b = e.bubble; if (!b) return;
@@ -1201,6 +1333,7 @@
         ctx.beginPath(); ctx.arc(p.x - d * r * 0.55, p.y, r, a0, a1); ctx.strokeStyle = p.col || '#fff'; ctx.lineWidth = lw; ctx.stroke();
         break;
       }
+      case 'mist': { ctx.globalAlpha = 0.3 * Math.min(1, k * 1.6) * Math.min(1, (1 - k) * 4); const r = p.size * (1.4 - k * 0.5), mg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r); mg.addColorStop(0, 'rgba(40,30,50,0.9)'); mg.addColorStop(1, 'rgba(40,30,50,0)'); ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); break; }
       case 'stink': {
         ctx.strokeStyle = '#7a9a2a'; ctx.lineWidth = 2.5; ctx.globalAlpha = Math.min(1, k * 1.5) * 0.85;
         ctx.beginPath(); for (let i = 0; i <= 10; i++) { const yy = p.y - i * p.size * 0.12, xx = p.x + Math.sin(i * 0.9 + p.seed + (1 - k) * 4) * p.size * 0.18; if (i) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); break;
@@ -1223,6 +1356,17 @@
     if (W.shakeT > 0) { const a = W.shakeA * (W.shakeT / 0.25); ctx.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
     drawBackground(t);
     drawBin(t);
+    // soft shadows on the ground, fading as things rise
+    ctx.save(); ctx.fillStyle = '#000';
+    for (const e of W.entities) {
+      if (!e.alive || e.def.noShadow || e.invisible) continue;
+      const hgt = W.groundY - e.bottom; if (hgt > 320 || hgt < -10) continue;
+      const k = 1 - Math.max(0, hgt) / 320, rw = e.w * (0.38 + 0.12 * k);
+      const rh = Math.max(3, rw * 0.16), sg = ctx.createRadialGradient(e.x, W.groundY + 1, 0, e.x, W.groundY + 1, rw);
+      sg.addColorStop(0, 'rgba(20,30,10,' + (0.34 * k).toFixed(3) + ')'); sg.addColorStop(0.6, 'rgba(20,30,10,' + (0.16 * k).toFixed(3) + ')'); sg.addColorStop(1, 'rgba(20,30,10,0)');
+      ctx.fillStyle = sg; ctx.save(); ctx.translate(e.x, W.groundY + 1); ctx.scale(1, rh / rw); ctx.translate(-e.x, -(W.groundY + 1)); ctx.beginPath(); ctx.arc(e.x, W.groundY + 1, rw, 0, TAU); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
     for (const e of W.entities) if (e.alive && e !== W.held) drawEntity(e, t);
     if (W.held && W.held.alive) drawEntity(W.held, t);
     for (const e of W.entities) if (e.alive && e.def.drawWorld) { ctx.save(); pen.begin(e.seed, boil); ctx.lineWidth = 1.5; e.def.drawWorld(pen, ctx, e, t); ctx.restore(); }
@@ -1245,6 +1389,20 @@
       pen.text('try: dog, dragon, race car, giant angry cat, flying pig, bomb...', W.W / 2, W.H * 0.36 + 34, 18);
       pen.text('drag things around  ·  throw them  ·  click them  ·  drop them in the trash', W.W / 2, W.H * 0.36 + 62, 16);
     }
+    // the creature you are driving: a bobbing marker and a help strip
+    const ce = W.ctrl.e;
+    if (ce && ce.alive) {
+      const bob = Math.sin(t * 5) * 4, mx = ce.x, my = Math.max(78, ce.top - (ce.def.boss ? 58 : 30) + bob);   // stay below the help strip
+      ctx.save(); ctx.fillStyle = '#2ecc71'; ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(mx - 9, my - 10); ctx.lineTo(mx + 9, my - 10); ctx.lineTo(mx, my); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.font = 'bold 13px ' + SB.FONT; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.strokeText('YOU', mx, my - 18); ctx.fillStyle = '#145a32'; ctx.fillText('YOU', mx, my - 18);
+      if (!ce.def.boss) { const bw = 46; ctx.fillStyle = '#fff'; ctx.fillRect(mx - bw / 2, my - 34, bw, 5); ctx.fillStyle = '#2ecc71'; ctx.fillRect(mx - bw / 2, my - 34, bw * Math.max(0, ce.hp) / ce.hpMax, 5); ctx.strokeStyle = '#145a32'; ctx.lineWidth = 1; ctx.strokeRect(mx - bw / 2, my - 34, bw, 5); }
+      ctx.restore();
+      const hud = 'Driving: ' + ce.def.name + (ce.ko ? ' (knocked out: click it to revive)' : '') + '   ·   arrows/WASD move   ·   up/space ' + (ce.move === 'fly' || ce.move === 'float' ? 'fly up, down fly down' : 'jump') + '   ·   F attack   ·   E special   ·   Esc let go';
+      ctx.save(); ctx.font = '15px ' + SB.FONT; const tw = ctx.measureText(hud).width + 24;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(W.W / 2 - tw / 2, 8, tw, 26); ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2; ctx.strokeRect(W.W / 2 - tw / 2, 8, tw, 26);
+      ctx.fillStyle = '#145a32'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(hud, W.W / 2, 21); ctx.restore();
+    } else if (ce) W.releaseControl(true);
     // counter
     ctx.save(); ctx.globalAlpha = 0.6; pen.begin(1, 0); pen.text(W.entities.length + ' things', 12, W.H - 14, 13, 'left'); ctx.restore();
   }
@@ -1271,6 +1429,8 @@
     updateCursorVelocity();
     // held entity follows cursor
     if (W.held) { const e = W.held, c = W.cursor; e.x += (c.x - W.heldOff.x - e.x) * 0.7; e.y += (c.y - W.heldOff.y - e.y) * 0.7; e.x = clamp(e.x, e.w / 2 - e.w * 0.3, W.W - e.w / 2 + e.w * 0.3); e.y = clamp(e.y, e.h / 2 - e.h * 0.3, W.H + e.h); e.vx = c.vx; e.vy = c.vy; e.grounded = false; }
+    if (W.ctrl.atkCd > 0) W.ctrl.atkCd -= dt;
+    if (W.ctrl.jumpQ > 0) W.ctrl.jumpQ -= dt;   // a quick tap of jump still counts for a moment
     // fixed step physics (paused for a split second on big hits)
     if (W.hitStopCd > 0) W.hitStopCd -= dt;
     if (W.hitStop > 0) W.hitStop -= dt; else acc += dt;

@@ -14,58 +14,85 @@
   };
   D.drawBird = function (p, e, t, o, s, w, h) {
     p.use('body');
-    const flying = e.flying, held = e.held, mood = e.mood;
+    const c = p.ctx, flying = e.flying, held = e.held, mood = e.mood;
     const walking = e.moving && e.grounded && !flying;
-    const ph = e.phase;
-    if (o.upright) {
+    const ph = e.phase, base = p.fill;
+    const light = k => SB.mixColor(base, '#fff', k), dark = k => SB.shade(base, k);
+    const wingCol = (p.pal && p.pal.wing && p.pal.wing !== SB.ROLES.wing) ? p.pal.wing : dark(0.18);
+    if (o.upright) {   // penguin: upright, tuxedo front, flippers
       const by = h / 2 - 14 * s;
       const fl = held || flying ? Math.sin(t * 12) * 0.6 : walking ? Math.sin(ph) * 0.3 : 0;
-      p.line(-6 * s, by - 4 * s, -12 * s, by + 6 * s - fl * 8 * s);
-      p.ellipse(0, by, 8 * s, 12 * s, true);
-      p.use('belly'); p.ellipse(1 * s, by + 2 * s, 5 * s, 8 * s, true); p.use('body');
-      p.line(6 * s, by - 4 * s, 12 * s, by + 6 * s + fl * 8 * s);
-      p.line(-4 * s, by + 12 * s, -8 * s, by + 14 * s); p.line(2 * s, by + 12 * s, 6 * s, by + 14 * s);
-      p.use('beak'); p.poly([6 * s, by - 7 * s, 12 * s, by - 5.5 * s, 6 * s, by - 4 * s], true);
+      p.fill = base; D.cap(p, -6 * s, by - 4 * s, -12 * s, by + 7 * s - fl * 8 * s, 4.5 * s, 2.5 * s);
+      p.ellipse(0, by, 8.5 * s, 12.5 * s, true, 0);
+      p.use('belly'); p.ellipse(1.5 * s, by + 2 * s, 5.5 * s, 9 * s, true, 0);
+      p.fill = base; D.cap(p, 6 * s, by - 4 * s, 12 * s, by + 7 * s + fl * 8 * s, 4.5 * s, 2.5 * s);
+      p.use('beak'); p.ellipse(-3 * s, by + 12.5 * s, 3.5 * s, 1.4 * s, true, 0); p.ellipse(3 * s, by + 12.5 * s, 3.5 * s, 1.4 * s, true, 0);
+      p.poly([5.5 * s, by - 8 * s, 12.5 * s, by - 6 * s, 5.5 * s, by - 4.5 * s], true);
       D.eye(p, 3 * s, by - 8 * s, o.eyeR * s, e, 0);
       return;
     }
     const legL = (o.longLegs ? 24 : o.legLen) * s;
     const by = flying ? 0 : (h / 2 - legL - 6 * s);
+    // legs: thin scaly legs with three forward toes and one back toe
     if (!flying) {
       const sw = walking ? Math.sin(ph) * 0.4 : held ? 0.3 : 0;
-      for (let k = -1; k <= 1; k += 2) { const a = sw * k, lx = k * 2 * s; const fx = lx + Math.sin(a) * legL, fy = by + 5 * s + Math.cos(a) * legL; p.line(lx, by + 5 * s, fx, fy); p.line(fx - 2 * s, fy, fx + 4 * s, fy); }
-    } else if (o.longLegs) { p.line(-2 * s, by + 5 * s, -16 * s, by + 8 * s); p.line(-2 * s, by + 5 * s, -16 * s, by + 11 * s); }
-    const tl = o.tail === 'long' ? 3 : 2;
-    for (let k = 0; k < tl; k++) p.line(-8 * s, by, -15 * s - (o.tail === 'long' ? 5 * s : 0), by - 4 * s + k * 4 * s);
-    if (o.fan) p.fuzz(-10 * s, by - 4 * s, 8 * s, 9 * s, true, 9);
-    p.ellipse(0, by, 9 * s, 6 * s, true, -0.2);
+      p.use('beak'); c.save(); c.strokeStyle = SB.shade(p.fill, 0.5);
+      for (let k = -1; k <= 1; k += 2) {
+        const a = sw * k, lx = k * 2 * s, fx = lx + Math.sin(a) * legL, fy = by + 5 * s + Math.cos(a) * legL;
+        c.lineWidth *= 1.3; p.line(lx, by + 4 * s, fx, fy); c.lineWidth /= 1.3;
+        p.line(fx, fy, fx + 4.5 * s, fy); p.line(fx, fy, fx + 3 * s, fy + 1.4 * s); p.line(fx, fy, fx - 2.5 * s, fy);
+      }
+      c.restore();
+    } else if (o.longLegs) { p.use('beak'); p.line(-2 * s, by + 5 * s, -16 * s, by + 8 * s); p.line(-2 * s, by + 5 * s, -16 * s, by + 11 * s); }
+    // tail: a fan of feathers
+    p.fill = wingCol;
+    const tl = o.tail === 'long' ? 1.5 : 1;
+    for (let k = -1; k <= 1; k++) p.poly([-7 * s, by - 1 * s + k * 1.5 * s, -16 * s * tl, by - 4 * s + k * 3.5 * s, -18 * s * tl, by - 2 * s + k * 3.5 * s, -8 * s, by + 1.5 * s + k * 1.2 * s], true);
+    if (o.fan) { p.fill = base; p.fuzz(-11 * s, by - 6 * s, 9 * s, 10 * s, true, 11); c.save(); c.globalAlpha *= 0.8; for (let k = 0; k < 7; k++) { const a = Math.PI * 0.6 + k * 0.32; p.fill = '#26a69a'; p.circle(-11 * s + Math.cos(a) * 7 * s, by - 6 * s + Math.sin(a) * 8 * s, 1.6 * s, true); } c.restore(); }
+    // body: a teardrop, round chest in front, tapering toward the tail
+    p.fill = base;
+    const bp = []; for (let i = 0; i < 18; i++) { const a = i / 18 * TAU, ca = Math.cos(a), sa = Math.sin(a); bp.push(ca * (ca < 0 ? 10.5 : 8.5) * s, by + sa * 6.2 * s * (ca < 0 ? 0.85 + 0.15 * (1 + ca) : 1)); }
+    p.poly(bp, true);
+    p.fill = (p.pal && p.pal.belly && p.pal.belly !== SB.ROLES.belly) ? p.pal.belly : light(0.45);
+    c.save(); c.globalAlpha *= 0.85; p.ellipse(3 * s, by + 2 * s, 5.5 * s, 3.8 * s, true, -0.2); c.restore();
+    // neck and head
     const hx = o.longNeck ? 9 * s : 8 * s, hy = o.longNeck ? by - 17 * s : by - 5 * s;
-    if (o.longNeck) { p.line(6 * s, by - 4 * s, hx - 1 * s, hy + 3 * s); p.line(8.5 * s, by - 3 * s, hx + 1.5 * s, hy + 3 * s); }
+    p.fill = base;
+    if (o.longNeck) D.cap(p, 5 * s, by - 3 * s, hx, hy + 2 * s, 5 * s, 3.4 * s);
     const hr = (o.bigEyes ? 6.5 : 5) * s;
     p.circle(hx, hy, hr, true);
-    if (o.crest) for (let k = 0; k < 3; k++) p.line(hx - 2 * s, hy - hr + 1 * s, hx - 6 * s - k * 2 * s, hy - hr - 5 * s + k * 2 * s);
-    if (o.comb) p.zigzag(hx - 4 * s, hy - hr + 1, hx + 3 * s, hy - hr + 1, -4 * s, 4);
+    if (o.crest) { p.fill = dark(0.1); for (let k = 0; k < 3; k++) p.poly([hx - 2 * s, hy - hr + 1 * s, hx - 6 * s - k * 2 * s, hy - hr - 5 * s + k * 2 * s, hx - 1 * s - k * s, hy - hr + 2 * s], true); p.fill = base; }
+    if (o.comb) { p.use('wattle'); p.poly([hx - 4 * s, hy - hr + 1.5 * s, hx - 3.5 * s, hy - hr - 3 * s, hx - 1.5 * s, hy - hr - 0.5 * s, hx, hy - hr - 3.5 * s, hx + 1.5 * s, hy - hr - 0.5 * s, hx + 3 * s, hy - hr - 2.5 * s, hx + 3 * s, hy - hr + 1.5 * s], true); }
+    if (o.bigEyes) { p.fill = light(0.35); p.ellipse(hx, hy - 0.5 * s, hr * 0.9, hr * 0.75, true, 0); }
     const bx = hx + hr - 1 * s, byy = hy;
     p.use('beak');
     switch (o.beak) {
       case 'long': p.poly([bx, byy - 1.5 * s, bx + 12 * s, byy + 1 * s, bx, byy + 2 * s], true); break;
-      case 'flat': p.ellipse(bx + 3 * s, byy + 1 * s, 5 * s, 2 * s, true); break;
-      case 'hook': p.poly([bx, byy - 2 * s, bx + 5 * s, byy - 1 * s, bx + 3 * s, byy + 4 * s, bx, byy + 1.5 * s], true); break;
+      case 'flat': p.ellipse(bx + 3 * s, byy + 1 * s, 5 * s, 2 * s, true); p.line(bx, byy + 1 * s, bx + 7 * s, byy + 1 * s); break;
+      case 'hook': p.poly([bx - 0.5 * s, byy - 2.2 * s, bx + 4 * s, byy - 1.6 * s, bx + 5.5 * s, byy + 1 * s, bx + 3 * s, byy + 4 * s, bx + 3 * s, byy + 1.5 * s, bx, byy + 1.8 * s], true); break;
       case 'tiny': p.poly([bx, byy - 1 * s, bx + 3 * s, byy + 0.5 * s, bx, byy + 1.5 * s], true); break;
       default: p.poly([bx, byy - 2 * s, bx + 6 * s, byy + 0.5 * s, bx, byy + 2.5 * s], true); if (mood === 'happy' || mood === 'scared') p.line(bx, byy + 0.5 * s, bx + 5 * s, byy + 0.5 * s);
     }
     if (o.wattle) { p.use('wattle'); p.ellipse(bx - 1 * s, byy + 4 * s, 1.5 * s, 3 * s, true); }
     if (o.bigEyes) { D.eye(p, hx - 2.5 * s, hy - 1 * s, 2.6 * s, e, -1); D.eye(p, hx + 2.5 * s, hy - 1 * s, 2.6 * s, e, 1); }
     else D.eye(p, hx + 1 * s, hy - 1.5 * s, o.eyeR * s, e, 0);
-    p.use('wing');
+    // wing: folded on the side with layered feathers, or spread wide in flight
+    p.fill = wingCol;
+    const folded = (lift) => {
+      const pts = [3 * s, by - 3.5 * s - lift, -3 * s, by - 5 * s - lift * 1.5, -10 * s, by - 3 * s - lift * 1.2, -15 * s, by + 0.5 * s - lift * 0.4, -11 * s, by + 2 * s, -7 * s, by + 1 * s, -3 * s, by + 2.5 * s, 2 * s, by + 1 * s];
+      p.poly(pts, true);
+      c.save(); c.globalAlpha *= 0.5; p.line(-2 * s, by - 2 * s - lift, -12 * s, by + 0.5 * s - lift * 0.3); p.line(0, by - 0.5 * s - lift * 0.6, -8 * s, by + 1.5 * s); c.restore();
+    };
     if (flying) {
       const f = Math.sin(t * o.flap);
-      if (o.wing === 'bat') p.poly([0, by - 2 * s, -6 * s, by - 8 * s - 10 * s * f, -18 * s, by - 6 * s - 14 * s * f, -16 * s, by - 1 * s - 8 * s * f, -10 * s, by - 8 * s * f + 1 * s, -4 * s, by + 1 * s], true);
-      else { p.curve(1 * s, by - 3 * s, -6 * s, by - 8 * s - 12 * s * f, -18 * s, by - 3 * s - 18 * s * f); p.curve(1 * s, by - 1 * s, -8 * s, by - 4 * s - 10 * s * f, -18 * s, by - 3 * s - 18 * s * f); p.line(-14 * s, by - 3 * s - 15 * s * f, -19 * s, by - 5 * s - 16 * s * f); }
-    } else {
-      p.curve(2 * s, by - 4 * s, -6 * s, by - 5 * s, -8 * s, by + 2 * s);
-      if (held) { const f = Math.sin(t * 14); p.curve(1 * s, by - 3 * s, -6 * s, by - 8 * s - 10 * s * f, -16 * s, by - 3 * s - 14 * s * f); }
-    }
+      if (o.wing === 'bat') { p.poly([0, by - 2 * s, -6 * s, by - 8 * s - 10 * s * f, -18 * s, by - 6 * s - 14 * s * f, -16 * s, by - 1 * s - 8 * s * f, -10 * s, by - 8 * s * f + 1 * s, -4 * s, by + 1 * s], true); }
+      else {
+        const tipX = -16 * s, tipY = by - 4 * s - 18 * s * f;
+        p.poly([3 * s, by - 3 * s, -4 * s, by - 9 * s - 10 * s * f, tipX, tipY, tipX + 2 * s, tipY + 3 * s, -11 * s, by - 2 * s - 8 * s * f, -12 * s, by - 1 * s - 5 * s * f, -6 * s, by + 0.5 * s], true);
+        c.save(); c.globalAlpha *= 0.55; for (let k = 0; k < 3; k++) p.line(-3 * s - k * 3 * s, by - 3 * s - (6 + k * 2.5) * s * f, -6 * s - k * 3.5 * s, by - 1 * s - (4 + k * 3) * s * f); c.restore();
+      }
+    } else folded(held ? Math.max(0, Math.sin(t * 14)) * 5 * s : 0);
+    p.fill = base;
   };
 
   // ---------- bugs ----------
@@ -221,20 +248,48 @@
         p.line(24, 1, 32, 0);
         D.eye(p, 17, -3, 1.9, e, 0);
         break;
-      case 'octopus':
-        for (let k = 0; k < 7; k++) { const x = -15 + k * 5, s2 = Math.sin(t * 4 + k + e.seed) * 4; p.curve(x, 6, x + s2, 12, x + s2 * 1.5, 18); }
-        p.ellipse(0, -4, 17, 14, true);
-        D.eye(p, -5, -6, 2.6, e, -1); D.eye(p, 5, -6, 2.6, e, 1);
-        D.mouth(p, 0, 2, 6, e);
+      case 'octopus': {
+        const base = p.fill, c = p.ctx, dk = SB.shade(base, 0.25);
+        for (let k = 0; k < 8; k++) {
+          const s0 = (k - 3.5) / 3.5, q = t * 3 + k * 1.3 + e.seed, front = k % 2;
+          const bx = s0 * 9, by = 4, cx = s0 * 15 + Math.sin(q) * 3, cy = 12, tx = s0 * 18 + Math.sin(q * 0.8) * 4, ty = 18 - Math.abs(Math.cos(q)) * 2;
+          p.fill = front ? base : dk;
+          const pts = D.tube(p, bx, by, cx, cy, tx, ty, 5.5, 1.2, 7, true);
+          if (front) { p.fill = SB.mixColor(base, '#fff', 0.5); for (let j = 2; j < pts.length - 1; j += 2) p.circle(pts[j][0] + 1, pts[j][1], 0.9, true); }
+          p.spiral(tx, ty, 2.2, 0.9, s0 < 0 ? Math.PI : 0);
+        }
+        p.fill = base;
+        p.poly([-13, 4, -15, -8, -11, -17, -4, -21, 4, -21, 11, -17, 15, -8, 13, 4], true);
+        c.save(); c.globalAlpha *= 0.4; p.fill = SB.mixColor(base, '#fff', 0.4); p.circle(-6, -14, 2.2, true); p.circle(5, -16, 1.6, true); p.circle(8, -8, 1.8, true); c.restore(); p.fill = base;
+        D.eye(p, -6, -4, 2.8, e, -1); D.eye(p, 6, -4, 2.8, e, 1);
+        D.mouth(p, 0, 2, 5, e);
         break;
-      case 'crab':
-        for (let k = 0; k < 3; k++) for (let sgn = -1; sgn <= 1; sgn += 2) { const wob = e.moving ? Math.sin(ph * 2 + k) * 2 : 0; p.line(sgn * (6 + k * 3), 2, sgn * (12 + k * 4), 8 + wob); }
-        p.ellipse(0, 0, 14, 8, true);
-        for (let sgn = -1; sgn <= 1; sgn += 2) { p.line(sgn * 12, -3, sgn * 20, -9); p.circle(sgn * 22, -11, 4, true); p.line(sgn * 22, -11, sgn * 26, -14); }
+      }
+      case 'crab': {
+        const base = p.fill, c = p.ctx;
+        for (let k = 0; k < 4; k++) for (let sgn = -1; sgn <= 1; sgn += 2) {
+          const wob = e.moving ? Math.sin(ph * 2 + k + (sgn > 0 ? 0 : 1)) * 2 : 0;
+          const ax = sgn * (5 + k * 2.5), kx = sgn * (13 + k * 3), ky = -2 - k * 0.5 + wob * 0.5, fx = sgn * (15 + k * 4), fy = 12 + wob;
+          p.fill = SB.shade(base, 0.15); D.cap(p, ax, 2, kx, ky, 2.4, 2); D.cap(p, kx, ky, fx, fy, 2, 1);
+        }
+        p.fill = base;
+        const shell = []; for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; shell.push(Math.cos(a) * 15, Math.sin(a) * (Math.sin(a) < 0 ? 8.5 : 6.5)); }
+        p.poly(shell, true);
+        c.save(); c.globalAlpha *= 0.45; p.zigzag(-13, -3, 13, -3, -1.5, 10); c.restore();
+        for (let sgn = -1; sgn <= 1; sgn += 2) {
+          const open = e.mood === 'angry' ? 0.5 + Math.sin(t * 9 + sgn) * 0.3 : 0.2;
+          D.cap(p, sgn * 11, -3, sgn * 18, -9, 3.2, 2.8);
+          c.save(); c.translate(sgn * 22, -12); c.scale(sgn, 1);
+          p.ellipse(0, 0, 5, 3.6, true, -0.4);
+          p.poly([3, -2, 9, -6, 7, -1], true);
+          c.save(); c.translate(3, 0); c.rotate(open); p.poly([0, 0, 6, 1.5, 0, 2.5], true); c.restore();
+          c.restore();
+        }
         p.line(-4, -7, -4, -12); p.line(4, -7, 4, -12);
-        D.eye(p, -4, -13, 1.8, e, -1); D.eye(p, 4, -13, 1.8, e, 1);
-        D.mouth(p, 0, 3, 5, e);
+        D.eye(p, -4, -13, 1.9, e, -1); D.eye(p, 4, -13, 1.9, e, 1);
+        D.mouth(p, 0, 2, 5, e);
         break;
+      }
       case 'jellyfish':
         for (let k = 0; k < 5; k++) { const x = -8 + k * 4, s2 = Math.sin(t * 3 + k * 1.3) * 3; p.curve(x, 2, x + s2, 10, x - s2, 17); }
         p.arc(0, 0, 14, Math.PI, TAU); p.zigzag(-14, 0, 14, 0, 3, 7);
@@ -276,30 +331,57 @@
     return { w: (o.len + 12) * o.s, h: 16 * o.s, draw(p, e, t) { p.ctx.scale(o.s, o.s); D.drawSnake(p, e, t, o); } };
   };
   D.drawSnake = function (p, e, t, o) {
-    const len = o.len, ph = e.phase * 2 + t * 2;
     p.use('body');
-    const pts = [], n = 12;
-    for (let i = 0; i <= n; i++) pts.push(-len / 2 + (len - 12) * i / n, 4 + Math.sin(i * 1.1 - ph) * 3);
-    p.stroke(SB.shade(p.fill, 0.45)); p.ctx.lineWidth *= 2.2; p.path(pts, false); p.ctx.lineWidth /= 2.2; p.stroke();
-    const hx = len / 2 - 8 + 4, hy = 4 + Math.sin(n * 1.1 - ph) * 3 - 4;
-    if (o.hood) p.ellipse(hx - 2, hy + 2, 7, 9, true);
-    p.ellipse(hx, hy, 6, 4, true);
-    D.eye(p, hx + 2, hy - 1.5, 1.4, e, 0);
-    if (Math.sin(t * 8) > 0.3) { p.line(hx + 6, hy + 1, hx + 12, hy + 1); p.line(hx + 12, hy + 1, hx + 14, hy - 1); p.line(hx + 12, hy + 1, hx + 14, hy + 3); }
-    if (o.rattle) for (let k = 0; k < 3; k++) p.circle(-len / 2 - 2 - k * 3, 4, 2, true);
+    const c = p.ctx, base = p.fill, len = o.len, ph = e.phase * 2 + t * 2;
+    const n = 16, P = [];
+    for (let i = 0; i <= n; i++) P.push([-len / 2 + (len - 12) * i / n, 4 + Math.sin(i * 1.05 - ph) * 3]);
+    // body: a tube that tapers to the tip of the tail
+    const L = [], R = [], W = [];
+    for (let i = 0; i <= n; i++) {
+      const a = P[Math.max(0, i - 1)], b = P[Math.min(n, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
+      const w = 0.6 + 3.4 * Math.min(1, i / 6);
+      W.push([nx, ny, w]); L.push(P[i][0] + nx * w, P[i][1] + ny * w); R.unshift(P[i][0] - nx * w, P[i][1] - ny * w);
+    }
+    if (o.rattle) { p.fill = '#d9c08a'; for (let k = 0; k < 3; k++) p.ellipse(-len / 2 - 2 - k * 3, P[0][1], 2.2, 2.6 - k * 0.3, true, 0); }
+    p.fill = base; p.poly(L.concat(R), true);
+    // pale belly scales along the underside, darker markings along the back
+    c.save(); c.strokeStyle = SB.mixColor(base, '#fff', 0.55); c.lineWidth *= 1.2;
+    c.beginPath(); for (let i = 2; i <= n; i++) { const [nx, ny, w] = W[i], x = P[i][0] + nx * w * 0.55, y = P[i][1] + ny * w * 0.55; if (i === 2) c.moveTo(x, y); else c.lineTo(x, y); } c.stroke(); c.restore();
+    p.fill = SB.shade(base, 0.35);
+    for (let i = 2; i < n; i += 2) { const [nx, ny, w] = W[i]; p.ellipse(P[i][0] - nx * w * 0.25, P[i][1] - ny * w * 0.25, 1.7, w * 0.42, true, Math.atan2(ny, nx)); }
+    // head: a broad wedge, eye, nostril and a flicking forked tongue
+    const hx = P[n][0] + 5, hy = P[n][1] - 2.5;
+    if (o.hood) { p.fill = (p.pal && p.pal.hood) || SB.shade(base, 0.12); p.ellipse(hx - 4, hy + 2, 6.5, 9.5, true, 0); c.save(); c.globalAlpha *= 0.5; p.circle(hx - 4, hy + 3, 2.4, false); c.restore(); }
+    p.fill = base;
+    p.poly([hx - 7, hy - 3, hx + 1, hy - 4.8, hx + 6.5, hy - 2.5, hx + 8.5, hy + 0.5, hx + 3, hy + 3.2, hx - 7, hy + 3.2], true);
+    p.dot(hx + 7, hy - 0.8, 0.8);
+    D.eye(p, hx + 1.5, hy - 1.5, 1.4, e, 0);
+    if (Math.sin(t * 8 + e.seed) > 0.3) { c.save(); c.strokeStyle = '#d62828'; c.lineWidth *= 0.8; p.line(hx + 8, hy + 1.5, hx + 13, hy + 1.5); p.line(hx + 13, hy + 1.5, hx + 15, hy - 0.5); p.line(hx + 13, hy + 1.5, hx + 15, hy + 3.5); c.restore(); }
   };
   D.frog = function (s) {
     s = s || 1;
     return {
       w: 30 * s, h: 20 * s, draw(p, e, t) {
         p.ctx.scale(s, s);
+        p.use('body');
+        const c = p.ctx, base = p.fill, light = SB.mixColor(base, '#fff', 0.45), dk = SB.shade(base, 0.22);
         const inAir = !e.grounded && !e.held;
-        if (inAir) { p.line(-8, 4, -18, -2); p.line(-18, -2, -22, 8); p.line(-22, 8, -27, 8); }
-        else { p.line(-8, 4, -14, 8); p.line(-14, 8, -19, 8); p.line(-9, 6, -15, 9); }
-        p.use('body'); p.ellipse(0, 2, 13, 8, true);
-        p.line(6, 6, 8, 10); p.line(8, 10, 12, 10); p.line(2, 7, 2, 10); p.line(2, 10, 5, 10);
-        D.eye(p, -4, -6, 3, e, -1); D.eye(p, 5, -6, 3, e, 1);
-        if (e.mood === 'happy') p.arc(2, -1, 8, 0.3, Math.PI - 0.3); else if (e.mood === 'scared') p.ellipse(3, 1, 3, 2, true); else p.line(-6, 1, 12, 0);
+        // back leg: big folded thigh, shin tucked under, webbed foot (stretched out while jumping)
+        p.fill = dk;
+        if (inAir) { D.cap(p, -7, 3, -16, -1, 6, 4.5); D.cap(p, -16, -1, -21, 7, 4.5, 3); p.poly([-21, 7, -28, 6, -27, 9, -21, 10], true); }
+        else { D.cap(p, -6, 3, -10, 7, 7, 5); D.cap(p, -10, 7, -2, 8.5, 4.5, 3.5); p.poly([-4, 8, -13, 8.5, -14, 10, -3, 10], true); }
+        // body: crouched, sloping up to the head
+        p.fill = base;
+        p.poly([-12, 6, -13, 0, -8, -5, 0, -7, 8, -6, 13, -2, 14, 3, 9, 7, 0, 9, -8, 9], true);
+        c.save(); c.globalAlpha *= 0.7; p.fill = light; p.poly([-6, 8, 4, 8.5, 11, 5, 4, 5, -4, 6], true); c.restore();
+        p.fill = SB.shade(base, 0.4); p.circle(-5, -2, 1.6, true); p.circle(1, -4, 1.2, true); p.circle(-8, 2, 1.1, true);
+        // front leg
+        p.fill = base; D.cap(p, 7, 4, 9, 10, 3, 2.4); p.line(9, 10, 12, 10); p.line(9, 10, 11, 11.5); p.line(9, 10, 7, 10.5);
+        // bulging eyes and a wide mouth
+        p.fill = base; p.circle(3, -7, 4, true); p.circle(9, -6, 3.6, true);
+        D.eye(p, 3, -7.5, 2.4, e, -1); D.eye(p, 9, -6.5, 2.2, e, 1);
+        if (e.mood === 'happy') p.arc(6, -2, 7, 0.3, Math.PI - 0.7); else if (e.mood === 'scared') p.ellipse(10, 1, 2.5, 1.8, '#5a2a2a'); else p.curve(-1, 1, 7, 3, 14, 0);
+        p.dot(13, -3, 0.7);
       }
     };
   };
@@ -308,28 +390,31 @@
   // A little stick rider. hip at (x,y); pedal circle optional.
   D.rider = function (p, e, t, x, y, o) {
     o = Object.assign({ handX: x + 16, handY: y - 8, pedalX: 0, pedalY: 0, pedalR: 0, stand: false, lean: 0 }, o);
-    const held = e.held, moving = e.moving;
+    const held = e.held, c = p.ctx;
     const sx = x + 2 + o.lean * 6, sy = y - 16;
-    p.line(x, y, sx, sy);                 // body
-    p.use('skin'); p.circle(sx + 1, sy - 6, 5.5, true); p.use('body');  // head
-    const ex = sx + 1, ey = sy - 7;
-    D.eye(p, ex - 2, ey, 1.2, e, -1); D.eye(p, ex + 2, ey, 1.2, e, 1);
-    D.mouth(p, ex, ey + 3, 4, e);
-    if (held) { p.line(sx, sy + 2, sx - 8, sy - 10); p.line(sx, sy + 2, sx + 10, sy - 10); }
-    else { p.line(sx, sy + 2, o.handX, o.handY); p.line(sx, sy + 2, o.handX - 2, o.handY + 1); }
+    const seat = p.fill;
+    // legs (trousers + shoes)
+    const legTo = (kx, ky, fx, fy) => { p.use('pants'); D.cap(p, x, y, kx, ky, 4.4, 4); D.cap(p, kx, ky, fx, fy, 3.8, 3.2); p.use('shoe'); p.ellipse(fx + 1.5, fy, 3.2, 1.5, true, 0); };
     if (o.pedalR) {
       const a = e.wheel * 1.5;
       for (let k = 0; k < 2; k++) {
         const aa = a + k * Math.PI;
         const px = o.pedalX + Math.cos(aa) * o.pedalR, py = o.pedalY + Math.sin(aa) * o.pedalR;
-        const kx = (x + px) / 2 + 6, ky = (y + py) / 2 - 4;
-        p.line(x, y, kx, ky); p.line(kx, ky, px, py);
+        legTo((x + px) / 2 + 6, (y + py) / 2 - 4, px, py);
       }
-    } else if (o.stand) {
-      p.line(x, y, x - 7, y + 20); p.line(x, y, x + 7, y + 20);
-    } else {
-      p.line(x, y, x + 8, y + 8); p.line(x + 8, y + 8, x + 6, y + 16);
-    }
+    } else if (o.stand) { legTo(x - 4, y + 10, x - 7, y + 20); legTo(x + 4, y + 10, x + 7, y + 20); }
+    else legTo(x + 8, y + 6, x + 6, y + 16);
+    // torso, arms, head
+    p.use('cloth'); p.poly([x - 4, y + 2, x + 4, y + 2, sx + 4.5, sy + 1, sx - 4, sy], true);
+    p.use('skin'); D.cap(p, sx + 0.5, sy - 1, sx + 1, sy - 3, 3, 3);
+    const arms = held ? [[sx - 8, sy - 10], [sx + 10, sy - 10]] : [[o.handX, o.handY], [o.handX - 2, o.handY + 1]];
+    for (const [hx, hy] of arms) { p.use('cloth'); D.cap(p, sx, sy + 2, (sx + hx) / 2, (sy + hy) / 2 + 2, 3.4, 3); D.cap(p, (sx + hx) / 2, (sy + hy) / 2 + 2, hx, hy, 3, 2.6); p.use('skin'); p.circle(hx, hy, 1.7, true); }
+    p.use('skin'); p.circle(sx + 1, sy - 8, 5.5, true);
+    p.use('hair'); p.poly([sx - 4.6, sy - 9, sx - 3, sy - 13, sx + 1, sy - 14.2, sx + 5, sy - 12.5, sx + 6.3, sy - 9, sx + 3, sy - 10.5, sx - 1, sy - 10], true);
+    const ex = sx + 1, ey = sy - 8;
+    D.eye(p, ex - 2, ey, 1.2, e, -1); D.eye(p, ex + 2, ey, 1.2, e, 1);
+    D.mouth(p, ex, ey + 3, 4, e);
+    p.fill = seat;
   };
 
   D.vehicle = function (kind, o) {
@@ -349,12 +434,18 @@
     p.use('body');
     const wa = e.wheel, c = p.ctx;
     const flying = e.flying;
+    // a streak of reflected light across a window
+    const glint = (x, y, w, h) => { c.save(); c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth *= 1.2; p.line(x + w * 0.25, y + h * 0.15, x + w * 0.05, y + h * 0.75); p.line(x + w * 0.5, y + h * 0.15, x + w * 0.35, y + h * 0.55); c.restore(); };
+    const lamps = (fx, ry, dy) => { p.ellipse(fx, ry + dy, 2.4, 2.8, '#ffe58a', 0); p.ellipse(-fx, ry + dy, 1.8, 2.6, '#e63946', 0); };
+    const bumpers = (x0, x1, y) => { p.rect(x1 - 3, y - 4, 5, 4, '#9aa5b1'); p.rect(x0 - 2, y - 4, 5, 4, '#9aa5b1'); };
     const carBody = (dy) => {
-      p.poly([-44, -9 + dy, -44, -22 + dy, -30, -24 + dy, -20, -40 + dy, 14, -40 + dy, 26, -24 + dy, 44, -22 + dy, 44, -9 + dy], true);
-      p.use('window'); p.poly([-17, -37 + dy, -25, -25 + dy, -3, -25 + dy, -3, -37 + dy], true);
-      p.poly([0, -37 + dy, 0, -25 + dy, 22, -25 + dy, 11, -37 + dy], true); p.use('body');
-      p.line(-3, -25 + dy, -3, -12 + dy);
-      p.dot(41, -17 + dy, 1.8);
+      p.poly([-44, -9 + dy, -45, -21 + dy, -30, -24 + dy, -20, -40 + dy, 14, -40 + dy, 26, -24 + dy, 43, -21 + dy, 45, -13 + dy, 44, -9 + dy], true);
+      c.save(); c.globalAlpha *= 0.35; p.line(-42, -17 + dy, 42, -17 + dy); c.restore();
+      p.use('window'); p.poly([-17, -37 + dy, -25, -25 + dy, -3, -25 + dy, -3, -37 + dy], true); glint(-25, -37 + dy, 22, 12);
+      p.poly([0, -37 + dy, 0, -25 + dy, 22, -25 + dy, 11, -37 + dy], true); glint(0, -37 + dy, 22, 12); p.use('body');
+      p.line(-3, -25 + dy, -3, -10 + dy); p.line(20, -24 + dy, 22, -11 + dy);
+      p.rect(4, -21 + dy, 5, 1.6, '#555'); p.rect(-15, -21 + dy, 5, 1.6, '#555');
+      lamps(41, -18, dy); bumpers(-44, 44, -8 + dy);
     };
     switch (kind) {
       case 'car': carBody(0); D.wheel(p, -26, -9, 9, wa); D.wheel(p, 26, -9, 9, wa); break;
@@ -365,12 +456,12 @@
       case 'taxi': carBody(0); p.rect(-9, -46, 18, 6, '#fff'); p.text('TAXI', 0, -16, 10); D.wheel(p, -26, -9, 9, wa); D.wheel(p, 26, -9, 9, wa); break;
       case 'limo':
         p.poly([-74, -9, -74, -22, -60, -24, -50, -40, 14, -40, 26, -24, 74, -22, 74, -9], true);
-        p.use('window'); for (let k = 0; k < 4; k++) p.rect(-47 + k * 16, -37, 12, 12, true);
+        p.use('window'); for (let k = 0; k < 4; k++) { p.rect(-47 + k * 16, -37, 12, 12, true); glint(-47 + k * 16, -37, 12, 12); }
         p.poly([18, -37, 18, -25, 22, -25, 11, -37], true); p.use('body');
-        p.dot(71, -17, 1.8); D.wheel(p, -52, -9, 9, wa); D.wheel(p, 52, -9, 9, wa); break;
+        lamps(71, -18, 0); bumpers(-74, 74, -8); D.wheel(p, -52, -9, 9, wa); D.wheel(p, 52, -9, 9, wa); break;
       case 'racecar':
         p.poly([-50, -8, -50, -14, -22, -16, -12, -28, 12, -28, 22, -16, 50, -14, 50, -8], true);
-        p.use('window'); p.poly([-10, -26, -18, -16, 12, -16, 8, -26], true); p.use('body');
+        p.use('window'); p.poly([-10, -26, -18, -16, 12, -16, 8, -26], true); glint(-14, -26, 22, 10); p.use('body'); p.ellipse(48, -11, 1.8, 2, '#ffe58a', 0);
         p.rect(-52, -34, 16, 3, true); p.line(-46, -31, -46, -16);
         p.text('1', 0, -22, 9); D.wheel(p, -30, -8, 8, wa); D.wheel(p, 30, -8, 8, wa); break;
       case 'monstertruck':
@@ -380,14 +471,15 @@
       case 'truck': case 'icecreamtruck':
         p.rect(-62, -58, 80, 48, true);
         p.poly([20, -10, 20, -42, 30, -54, 60, -54, 60, -10], true);
-        p.use('window'); p.rect(34, -50, 22, 16, true); p.use('body');
-        p.dot(58, -22, 1.8);
+        p.use('window'); p.rect(34, -50, 22, 16, true); glint(34, -50, 22, 16); p.use('body');
+        p.ellipse(58, -20, 2.4, 3, '#ffe58a', 0); p.ellipse(-61, -18, 1.8, 2.6, '#e63946', 0); bumpers(-62, 60, -9);
         if (kind === 'icecreamtruck') { p.text('ICE CREAM', -22, -36, 12); p.poly([-30, -58, -18, -58, -24, -74], '#e8b96f'); p.circle(-24, -78, 7, '#ffd6e0'); }
         D.wheel(p, -44, -10, 10, wa); D.wheel(p, -20, -10, 10, wa); D.wheel(p, 42, -10, 10, wa); break;
       case 'firetruck':
         p.rect(-68, -54, 90, 44, true);
         p.poly([22, -10, 22, -44, 32, -56, 66, -56, 66, -10], true);
-        p.use('window'); p.rect(38, -52, 24, 16, true); p.use('body');
+        p.use('window'); p.rect(38, -52, 24, 16, true); glint(38, -52, 24, 16); p.use('body');
+        p.ellipse(64, -20, 2.4, 3, '#ffe58a', 0); bumpers(-68, 66, -9);
         p.line(-64, -58, 10, -58); p.line(-64, -64, 10, -64); for (let k = 0; k < 7; k++) p.line(-60 + k * 11, -58, -60 + k * 11, -64);
         p.text('FIRE', -22, -32, 14);
         p.circle(50, -60, 3, '#ffe066');
@@ -395,14 +487,15 @@
       case 'ambulance':
         p.rect(-58, -56, 82, 46, true);
         p.poly([24, -10, 24, -44, 34, -56, 58, -56, 58, -10], true);
-        p.use('window'); p.rect(38, -52, 16, 16, true); p.use('body');
+        p.use('window'); p.rect(38, -52, 16, 16, true); glint(38, -52, 16, 16); p.use('body'); p.ellipse(56, -20, 2.4, 3, '#ffe58a', 0); bumpers(-58, 58, -9);
         p.stroke('#e63946'); c.lineWidth *= 2.5; p.line(-18, -42, -18, -24); p.line(-27, -33, -9, -33); c.lineWidth /= 2.5; p.stroke();
         p.rect(-6, -62, 12, 6, Math.floor(t * 4) % 2 ? '#e63946' : '#fff');
         D.wheel(p, -40, -10, 10, wa); D.wheel(p, 40, -10, 10, wa); break;
       case 'bus':
         p.poly([-78, -10, -78, -52, -70, -58, 70, -58, 78, -52, 78, -10], true);
-        p.use('window'); for (let k = 0; k < 6; k++) p.rect(-68 + k * 22, -52, 16, 16, true);
-        p.rect(64, -52, 10, 40, true); p.use('body');
+        p.use('window'); for (let k = 0; k < 6; k++) { p.rect(-68 + k * 22, -52, 16, 16, true); glint(-68 + k * 22, -52, 16, 16); }
+        p.rect(64, -52, 10, 40, true); p.use('body'); p.ellipse(76, -18, 2.2, 3, '#ffe58a', 0); p.ellipse(-77, -18, 1.8, 3, '#e63946', 0); bumpers(-78, 78, -9);
+        c.save(); c.globalAlpha *= 0.35; p.line(-76, -30, 62, -30); c.restore();
         if (o.school) p.text('SCHOOL BUS', 0, -28, 12);
         p.dot(76, -22, 1.8);
         D.wheel(p, -50, -10, 10, wa); D.wheel(p, 50, -10, 10, wa); break;
@@ -461,7 +554,8 @@
         p.line(-48, -30, -30, -30);
         p.ellipse(0, -22, 50, 10, true);
         p.poly([-6, -20, 12, -20, 16, -8, -16, -8], true);
-        p.use('window'); for (let k = 0; k < 4; k++) p.circle(-20 + k * 12, -25, 2.5, true); p.use('body');
+        p.use('window'); for (let k = 0; k < 6; k++) p.circle(-26 + k * 9, -25, 2.2, true); p.use('body');
+        c.save(); c.globalAlpha *= 0.4; p.line(-46, -19, 44, -19); c.restore();
         p.line(20, -29, 32, -26);
         const a = wa * 3 + t * (flying ? 40 : 0);
         p.line(50, -22 - Math.sin(a) * 14, 50, -22 + Math.sin(a) * 14);
@@ -478,7 +572,7 @@
       case 'helicopter': {
         p.line(-18, -8, 18, -8); p.line(-10, -8, -8, -14); p.line(10, -8, 8, -14);
         p.ellipse(0, -28, 24, 14, true);
-        p.use('window'); p.poly([8, -40, 22, -34, 20, -26, 8, -26], true); p.use('body');
+        p.use('window'); p.poly([8, -40, 22, -34, 20, -26, 8, -26], true); glint(8, -40, 14, 14); p.use('body');
         p.line(-22, -30, -50, -36); p.line(-20, -24, -50, -32);
         p.poly([-50, -36, -50, -48, -44, -48, -46, -36], true);
         p.line(0, -42, 0, -50);

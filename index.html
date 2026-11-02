@@ -6,7 +6,7 @@
   <title>Stickbox — a stick figure sandbox</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261023a">
+  <link rel="stylesheet" href="css/style.css?v=20261101d">
 </head>
 <body>
   <div id="bar">
@@ -17,6 +17,7 @@
     <button id="battle" type="button" title="Creatures attack everything except their own kind">Battle: ON</button>
     <button id="clearKo" type="button" title="Sweep all knocked-out creatures into the trash">Clear K.O.</button>
     <button id="bossBtn" type="button" title="Summon a giant boss">Bosses</button>
+    <button id="ctrlBtn" type="button" title="Take control of a creature, person, animal or boss (or double-click one)">Control</button>
     <button id="soundBtn" type="button" title="Turn sound effects on or off">Sound: ON</button>
     <button id="poopBtn" type="button" title="Turn poop on or off (switch it off for younger kids)">Poop: ON</button>
     <button id="clear" type="button" title="Remove everything">Clear</button>
@@ -34,6 +35,7 @@
         <li><b>Drop</b> anything on the <b>trash can</b> (bottom right) to delete it. Or hover and press Delete.</li>
         <li>Creatures watch your cursor. Shy ones run, friendly ones follow, scary ones chase!</li>
         <li><b>Battle mode</b> (the Battle button): every creature attacks everything that isn't its own kind. Hits take health, and a creature with none left is knocked out and lies down. <b>Click</b> a knocked-out creature to revive it, drop it in the trash, or press <b>Clear K.O.</b> to sweep them all away. Switch the button off for a peaceful sandbox.</li>
+        <li><b>Control</b> (the Control button, or double-click a creature): drive any creature, person, animal or boss yourself. Arrows or WASD move, Up or Space jumps (fliers fly up and down), <b>F</b> attacks, <b>E</b> uses its special attack, Esc lets go. On a touch screen, use the buttons at the bottom.</li>
         <li><b>Bosses</b> (the Bosses button): five giant monsters with signature attacks and lots of health. Each one has a weakness; the boss panel tells you what it is.</li>
         <li>Try: bomb, trampoline, dragon, zombie, fire, rain cloud, tornado, ufo, black hole, present, potion, cannon...</li>
       </ul>
@@ -54,20 +56,24 @@
       <div id="bossCards"></div>
     </div>
   </div>
+  <div id="pad" hidden>
+    <div class="padMove"><button data-k="left" type="button">&#9664;</button><button data-k="up" type="button">&#9650;</button><button data-k="down" type="button">&#9660;</button><button data-k="right" type="button">&#9654;</button></div>
+    <div class="padAct"><button data-k="attack" type="button" title="Attack (F)">Attack</button><button data-k="special" type="button" title="Special (E)">Special</button><button data-k="release" type="button" title="Let go (Esc)">Let go</button></div>
+  </div>
   <canvas id="c"></canvas>
 
-  <script src="js/pen.js?v=20261023a"></script>
-  <script src="js/draw.js?v=20261023a"></script>
-  <script src="js/draw2.js?v=20261023a"></script>
-  <script src="js/dictionary.js?v=20261023a"></script>
-  <script src="js/words-animals.js?v=20261023a"></script>
-  <script src="js/words-people.js?v=20261023a"></script>
-  <script src="js/words-vehicles.js?v=20261023a"></script>
-  <script src="js/words-items.js?v=20261023a"></script>
-  <script src="js/bosses.js?v=20261023a"></script>
-  <script src="js/colors.js?v=20261023a"></script>
-  <script src="js/entity.js?v=20261023a"></script>
-  <script src="js/sound.js?v=20261023a"></script>
-  <script src="js/game.js?v=20261023a"></script>
+  <script src="js/pen.js?v=20261101d"></script>
+  <script src="js/draw.js?v=20261101d"></script>
+  <script src="js/draw2.js?v=20261101d"></script>
+  <script src="js/dictionary.js?v=20261101d"></script>
+  <script src="js/words-animals.js?v=20261101d"></script>
+  <script src="js/words-people.js?v=20261101d"></script>
+  <script src="js/words-vehicles.js?v=20261101d"></script>
+  <script src="js/words-items.js?v=20261101d"></script>
+  <script src="js/bosses.js?v=20261101d"></script>
+  <script src="js/colors.js?v=20261101d"></script>
+  <script src="js/entity.js?v=20261101d"></script>
+  <script src="js/sound.js?v=20261101d"></script>
+  <script src="js/game.js?v=20261101d"></script>
 </body>
 </html>

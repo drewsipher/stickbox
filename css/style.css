@@ -51,3 +51,8 @@ canvas { display: block; touch-action: none; }
 #soundBtn.on:hover { background: var(--paper); color: var(--ink); }
 #poopBtn.on { background: var(--ink); color: var(--paper); }
 #poopBtn.on:hover { background: var(--paper); color: var(--ink); }
+#ctrlBtn.on { background: #2ecc71; color: #fff; border-color: #145a32; }
+#pad[hidden] { display: none; }
+#pad { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: space-between; padding: 0 16px; pointer-events: none; z-index: 4; }
+#pad button { pointer-events: auto; font-size: 20px; min-width: 56px; min-height: 52px; margin: 3px; background: rgba(255,255,255,0.85); touch-action: none; user-select: none; }
+#pad .padAct button { font-size: 17px; }

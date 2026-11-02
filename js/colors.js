@@ -3,6 +3,15 @@
 // (skin, cloth, hat, window, wing...) that the drawing templates ask for with p.use('role').
 // Items can also list `seq`: one colour per filled shape, in drawing order.
 (function () {
+  // realistic drawing mode for a thing: no sketch wobble, rounded corners (more for living things than for
+  // objects and machines), solid-form lighting for creatures, faint outlines
+  SB.realistic = function (pen, def) {
+    const alive = def.creature && def.cat !== 'vehicle';
+    pen.wobble = 0; pen.shading = true; pen.softInk = true;
+    pen.smooth = alive ? 7 : 2.5;
+    pen.round = alive;
+    pen.inkK = 0.45;
+  };
   const K = {
     red: '#e63946', darkred: '#a4262c', orange: '#f4862c', yellow: '#f6d13b', gold: '#f2b632', green: '#4caf50', dkgreen: '#2e7d32', lime: '#9ccc65',
     teal: '#26a69a', blue: '#3d7ee8', ltblue: '#89c4f4', navy: '#2c3e73', purple: '#8e44ad', violet: '#b57edc', pink: '#f28cb1', hotpink: '#e84393',
@@ -15,7 +24,7 @@
     gold: K.gold, gem: '#7ec8e3', saber: '#4cc9f0', balloon: '#e0475b', leather: '#8b4513', orange: '#e8772e', window: '#bfe6f8', wheel: '#333', belly: '#f7f1e3', beak: '#f2a83b',
     wattle: '#e63946', wing: '#eef4f8', batwing: '#3a3a3a', fairywing: '#e8f4ff', teeth: '#fff', paper: '#fff', nose: '#e0475b', bag: '#a8743d', apron: '#fff', shield: '#c0392b',
     tail: '#3fb7a5', fur: '#b58c72', mane: '#c98a2f', wool: '#f4f1ea', spike: '#e8e0c8', horn: '#f0e6d2', snout: '#f2c9b0', mouth: '#5a2a2a', shell: '#8b5a2b', sail: '#fff',
-    candy: '#e0475b', book: '#3f6fb5', fin: '#a83a30', hood: '#3f8f4a', hoof: '#222', far: '#555', leg: '#555', telson: '#e0a030', stinger: '#2a1a10', dark: '#2b1d08'
+    candy: '#e0475b', book: '#3f6fb5', fin: '#a83a30', hood: '#3f8f4a', pants: '#3d4f73', shoe: '#3b2a1e', hoof: '#222', far: '#555', leg: '#555', telson: '#e0a030', stinger: '#2a1a10', dark: '#2b1d08'
   };
   // per-category defaults
   const CAT = {
@@ -73,17 +82,18 @@
     bucket: '#3d7ee8', toilet: K.white, bell: K.gold, fan: '#9aa5b1', magnet: '#e63946', trampoline: '#3d7ee8', potion: '#8e44ad', skull: K.cream, heart: '#e63946', 'soccer net': K.white, poop: '#6b4a2b', trash: '#9aa5b1', battery: '#f6d13b', 'spring toy': '#3d7ee8',
     fireball: '#ff8c1a', web: '#f4f4f4', icicle: '#cfeeff', venom: '#7bd88f', stinger: '#e0a030',
     // bosses
-    kraken: { body: '#c94a3d', fin: '#a83a30', beak: '#3b2416' }, 'mega robot': { body: '#aab4be', armor: '#5d6d7e', metal: '#d0d8e0' }, 'king kong': { body: '#3d2b1f', skin: '#b58c72', gold: K.gold, mouth: '#5a2a2a' },
-    hydra: { body: '#3f8f4a', spike: '#c9d5a0', horn: '#f0e6d2', mouth: '#7a2e2e' }, 'lava golem': { body: '#3d3d3d' }, 'giant spider': { body: '#3a2a22' }, 'giant moth': { body: '#b07d4a', wing: '#f2e2b0' }, 'ice golem': { body: '#cfeeff', spike: '#eef8ff' },
-    'giant snake': { body: '#4f9b3f', belly: '#d8e8a0', hood: '#3f7d34', mouth: '#7a2e2e' },
-    'giant angry bull': { body: '#4a2c1c', far: '#2e1b11', hoof: '#1b1b1b', horn: '#efe4cc', snout: '#7a5444', hair: '#24160d' },
-    'beetle swarm': { body: '#1f5f45', dark: '#1a1a1a', horn: '#2a1a10', far: '#123a2a', gold: '#f2b632' },
-    'wasp swarm': { body: '#f6c90e', dark: '#2b1d08', wing: '#eef6ff', gold: '#f2b632' },
-    'giant scorpion': { body: '#7a3519', far: '#4f200e', leg: '#62290f', telson: '#e8a33a', stinger: '#2a1a10' }
+    kraken: { body: '#5e1a26', fin: '#3f0f18', beak: '#1a0f0a', eyeGlow: '#ffd23f' }, 'mega robot': { body: '#4a5058', armor: '#2a2e34', metal: '#6b737c' }, 'king kong': { body: '#1a1412', skin: '#3a2a24', gold: K.gold, mouth: '#3a0d0d', eyeGlow: '#ff3b14' },
+    hydra: { body: '#24382a', spike: '#a8a58a', horn: '#d9d0b8', mouth: '#4a0d0d', eyeGlow: '#ffde33' }, 'lava golem': { body: '#262222' }, 'giant spider': { body: '#1c1512', leg: '#21170f', band: '#7a2416', eye: '#ff2a14' }, 'giant moth': { body: '#3a2e26', wing: '#6e5d4c', eyeGlow: '#ff5a1f' }, 'ice golem': { body: '#a9d4ea', spike: '#e4f6ff' },
+    'giant snake': { body: '#1d3320', belly: '#7d8a52', hood: '#253f22', mouth: '#4a0d0d' },
+    'giant angry bull': { body: '#1c1310', far: '#120c0a', hoof: '#0d0d0d', horn: '#d9ccb0', snout: '#3a2a24', hair: '#0d0907' },
+    'giant praying mantis': { body: '#7a8048', far: '#4f5430', leg: '#6e7440', wing: '#9a9a5e', eye: '#ff3b1f', belly: '#b5b07a' },
+    'beetle swarm': { body: '#16161a', dark: '#0b0b0b', horn: '#1e120c', far: '#0c0c10', gold: '#f2b632' },
+    'wasp swarm': { body: '#e0780f', dark: '#160e06', wing: '#d8e2ea', gold: '#f2b632' },
+    'giant scorpion': { body: '#141418', far: '#0b0b0e', leg: '#1d1b22', band: '#5a1d14' }
   };
   // one colour per filled shape, in the order the item draws them
   const SEQ = {
-    tree: ['#8b5a2b', '#4caf50'], house: ['#f3dcb8', '#c0392b', '#8b5a2b', '#8b5a2b', '#bfe6f8', '#bfe6f8'], flower: ['#4caf50', '#4caf50', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f6d13b'],
+    house: ['#f3dcb8', '#c0392b', '#8b5a2b', '#8b5a2b', '#bfe6f8', '#bfe6f8'], flower: ['#4caf50', '#4caf50', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f28cb1', '#f6d13b'],
     present: ['#e63946', '#f2b632', '#f2b632', '#f2b632'], bomb: ['#333', '#8c8c8c', '#f6d13b'], balloon: ['#e63946', '#e63946'], lamp: ['#6c7a89', '#f6d13b'], tent: ['#f4862c', '#8b3a0f'], bed: ['#8b5a2b', '#3d7ee8', '#fff'],
     tv: ['#4d5560', '#bfe6f8'], phone: ['#222', '#bfe6f8'], bucket: ['#3d7ee8', '#7ec8e3'], castle: ['#c9c9c9', '#c9c9c9', '#c9c9c9', '#8b5a2b'], 'soccer ball': ['#fff'], 'rain cloud': ['#9aa5b1'], 'ice cream': ['#e8b96f', '#f28cb1', '#fff'],
     fire: ['#ff8c1a'], mushroom: ['#e6dcc4', '#e63946'], cake: ['#f28cb1', '#fff', '#e63946'], trampoline: ['#3d7ee8'], 'treasure chest': ['#8b5a2b', '#f2b632'], flag: ['#8c8c8c', '#e63946']
@@ -94,5 +104,6 @@
     d.pal = Object.assign({}, cat, typeof own === 'string' ? { body: own } : (own || {}));
     if (!d.pal.body) d.pal.body = cat.body || '#fff';
     if (SEQ[n]) d.seq = SEQ[n];
+    d.palFixed = { skin: !!(own && typeof own === 'object' && own.skin), hair: !!(own && typeof own === 'object' && own.hair) };
   }
 })();

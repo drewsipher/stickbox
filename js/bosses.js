@@ -47,7 +47,7 @@
   // glowing crack: a heavy zigzag seam with little heat ticks
   D.crack = function (p, x0, y0, x1, y1, n) {
     const c = p.ctx;
-    c.save(); c.lineWidth = 3; c.strokeStyle = '#ff7a1a'; p.zigzag(x0, y0, x1, y1, 3, n); c.strokeStyle = '#ffb347';
+    c.save(); c.lineWidth = 3; c.strokeStyle = '#ff7a1a'; c.shadowColor = '#ff5a00'; c.shadowBlur = 8; p.zigzag(x0, y0, x1, y1, 3, n); c.strokeStyle = '#ffb347';
     for (let k = 0; k < n; k += 2) { const s = (k + 0.5) / n; const x = x0 + (x1 - x0) * s, y = y0 + (y1 - y0) * s; p.line(x - 3, y - 1, x - 6, y - 4); p.line(x + 3, y + 1, x + 6, y + 4); }
     c.restore();
   };
@@ -99,6 +99,8 @@
     p.poly([-30, -14, 30, -14, 32, 8, 22, 20, -22, 20, -32, 8], true);
     p.poly([-30, -6, -44, -2, -44, 4, -30, 4], true);
     D.eye(p, -16, -2, 9.5, e, -1); D.eye(p, 16, -2, 9.5, e, 1);
+    c.save(); c.strokeStyle = 'rgba(240,200,190,0.55)'; c.lineWidth *= 1.2; p.line(-24, -74, -10, -50); p.line(-20, -70, -8, -66); p.line(12, -84, 24, -60); p.line(-28, -8, -20, 6); c.restore();   // old scars
+    if (Math.sin(t * 1.3 + e.seed) > -0.3) { const dr = (t * 0.9) % 1; c.fillStyle = 'rgba(190,220,170,0.75)'; c.beginPath(); c.ellipse(1, 30 + dr * 16, 2, 3 + dr * 2, 0, 0, TAU); c.fill(); }   // drool
     p.use('beak');
     if (angry || mood === 'scared') { p.poly([-8, 18, 8, 18, 0, 28], '#3b2416'); p.poly([-5, 24, 5, 24, 0, 32], '#fff'); }
     else { p.poly([-6, 18, 6, 18, 0, 26], true); }
@@ -164,7 +166,9 @@
     p.use('armor'); p.poly([-38, -60, 38, -60, 48, -34, 42, 0, 26, 8, -26, 8, -42, 0, -48, -34], true);
     p.line(-38, -60, -30, -20); p.line(38, -60, 30, -20);
     p.use('body'); p.poly([-16, -52, 16, -52, 20, -20, -20, -20], true);
-    p.circle(0, -36, 9, true); p.circle(0, -36, 5, '#4cc9f0'); p.circle(0, -36, 1.5, '#fff');
+    p.circle(0, -36, 9, true); c.save(); c.shadowColor = '#ff3b1f'; c.shadowBlur = 12; p.circle(0, -36, 5, '#ff3b1f'); c.restore(); p.circle(0, -36, 1.5, '#ffe0d0');
+    c.save(); c.globalAlpha *= 0.7; c.strokeStyle = '#7a3e1c'; c.lineWidth *= 1.6; p.line(-30, -40, -28, -8); p.line(-22, -12, -21, 6); p.line(26, -30, 28, -4); p.line(-6, 2, -4, 22); c.restore();
+    c.save(); c.strokeStyle = 'rgba(220,225,230,0.6)'; p.line(14, -56, 30, -44); p.line(16, -52, 26, -46); p.line(-36, -24, -24, -34); c.restore();
     D.hatch(p, -34, -28, -34, -6, 4, 6, 0); D.hatch(p, 34, -28, 34, -6, 4, 6, Math.PI);
     p.dot(-40, -50, 1.4); p.dot(40, -50, 1.4); p.dot(-36, -8, 1.4); p.dot(36, -8, 1.4);
     p.use('armor'); p.poly([-64, -52, -52, -72, -30, -74, -28, -50, -40, -40, -62, -42], true); p.line(-58, -54, -36, -56);
@@ -176,7 +180,7 @@
     p.use('armor'); p.poly([-20, -70, -20, -96, -12, -104, 12, -104, 20, -96, 20, -70], true); p.use('body');
     p.line(-20, -78, 20, -78);
     p.rect(-16, -94, 32, 12, '#000');
-    c.save(); c.strokeStyle = angry ? '#ff3b3b' : '#4cc9f0'; c.lineWidth = 2.6;
+    c.save(); c.strokeStyle = '#ff2a14'; c.shadowColor = '#ff2a14'; c.shadowBlur = 9; c.lineWidth = 2.8;
     const lx = e.lookX * 4, ly = e.lookY * 2;
     if (mood === 'dizzy') { p.line(-11 + lx, -91, -5 + lx, -85); p.line(-5 + lx, -91, -11 + lx, -85); p.line(5 + lx, -91, 11 + lx, -85); p.line(11 + lx, -91, 5 + lx, -85); }
     else if (mood === 'sleep') { p.line(-12, -88, -4, -88); p.line(4, -88, 12, -88); }
@@ -257,7 +261,8 @@
     D.eye(p, -7, -6, 3, e, -1); D.eye(p, 9, -6, 3, e, 1);
     p.use('skin'); p.poly([-12, 2, 16, 0, 24, 7, 20, 21, 4, 26, -10, 21, -15, 10], true);        // muzzle
     p.arc(4, 7, 2.6, Math.PI, TAU); p.arc(12, 7, 2.6, Math.PI, TAU); p.dot(4, 8, 1.2); p.dot(12, 8, 1.2);
-    if (angry || beat || pound || mood === 'scared') { p.use('mouth'); p.poly([-8, 14, 19, 12, 16, 22, -5, 23], true); p.use('skin'); p.zigzag(-6, 14, 17, 12, 3.5, 6); p.zigzag(-4, 23, 15, 22, -3, 5); }
+    c.save(); c.strokeStyle = 'rgba(200,170,160,0.75)'; c.lineWidth *= 1.2; p.line(-12, -20, 0, 2); p.line(-9, -20, 3, 0); p.line(10, 16, 18, 24); c.restore();   // claw scars
+    if (mood !== 'sleep') { p.use('mouth'); p.poly([-8, 14, 19, 12, 16, 22, -5, 23], true); p.use('skin'); p.zigzag(-6, 14, 17, 12, 3.5, 6); p.zigzag(-4, 23, 15, 22, -3, 5); }
     else D.mouth(p, 5, 17, 12, e);
     c.restore();
   };
@@ -319,7 +324,8 @@
       p.use('horn'); p.poly([-8, -11, -6, -22, 0, -11], true); p.poly([0, -12, 6, -21, 9, -10], true); p.use('body');
       p.line(-6, -6, 6, -8); p.curve(6, -2, 14, -4, 22, -1);
       p.dot(20, -1, 1.1);
-      const jaw = angry || breathing || mood === 'scared' || mood === 'happy';
+      const jaw = mood !== 'sleep';
+      if (jaw && !breathing) { const dr = (t * 1.1 + i * 0.4) % 1; c.fillStyle = 'rgba(200,225,170,0.8)'; c.beginPath(); c.ellipse(10, 16 + dr * 12, 1.4, 2.2 + dr, 0, 0, TAU); c.fill(); }
       if (jaw) { p.use('mouth'); p.poly([-10, 8, 4, 7, 16, 5, 24, 4, 20, 14, 6, 17, -8, 13], true); p.use('body'); p.zigzag(-6, 7, 22, 4, 3, 7); p.zigzag(-4, 13, 19, 13, -3, 6); }
       else p.zigzag(-10, 6, 22, 3, 2.2, 8);
       D.eye(p, 1, -4, 2.6, e, 1);
@@ -395,60 +401,88 @@
   };
 
   // ---------- the giant spider: a tarantula the size of a truck ----------
-  D.spider = function () { return { w: 200, h: 140, draw(p, e, t) { p.ctx.translate(-8, 4); D.drawSpider(p, e, t); } }; };
+  D.spiderMouth = [72, 22];   // template coords of the fangs (where webs are spat from)
+  D.spider = function () { return { w: 320, h: 210, draw(p, e, t) { p.ctx.translate(-10, 0); D.drawSpider(p, e, t); } }; };
   D.drawSpider = function (p, e, t) {
-    p.use('body');
     const c = p.ctx, mood = e.mood, held = e.held;
     const walking = e.moving && e.grounded && !held;
     const inAir = !e.grounded && !held;
-    const angry = mood === 'angry' || e.mode === 'hunt';
-    const spit = e.spitT > 0;
-    const breathe = Math.sin(t * 2 + e.seed) * 1.5;
-    const tapered = (x0, y0, x1, y1, w0, w1) => { const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d; p.poly([x0 + nx * w0 / 2, y0 + ny * w0 / 2, x1 + nx * w1 / 2, y1 + ny * w1 / 2, x1 - nx * w1 / 2, y1 - ny * w1 / 2, x0 - nx * w0 / 2, y0 - ny * w0 / 2], true); };
-    const ATT = [[34, -4], [24, -2], [12, -2], [2, -4]], KNEE = [[76, -58], [50, -70], [10, -72], [-34, -62]], FOOT = [[98, 64], [60, 66], [-4, 66], [-64, 60]];
+    const angry = mood === 'angry' || e.mode === 'hunt' || e.spitT > 0;
+    const G = 100, pal = p.pal || {};
+    const BODY = pal.body || '#1c1512', LEG = pal.leg || '#21170f', BAND = pal.band || '#7a2416', EYE = pal.eye || '#ff2a14';
+    const pulse = Math.sin(t * 2.2 + e.seed) * 1.6;
+    // bristles sticking out of an outline
+    const bristles = (pts, len, n, side) => { c.save(); c.strokeStyle = '#0d0907'; c.lineWidth = Math.max(0.8, c.lineWidth * 0.55); D.fur(p, pts, n, len, side, 0.35); c.restore(); };
+    // ---- legs: tall arched knees, banded joints, hairy segments, hooked claws ----
+    const ATT = [[52, 4], [40, 8], [26, 8], [14, 6]], KNEE = [[96, -78], [62, -94], [8, -96], [-42, -84]], FOOT = [[162, G], [112, G], [-62, G], [-142, G]];
     const leg = (i, far) => {
-      const ph = e.phase * 1.4 + i * Math.PI + (far ? Math.PI : 0);
-      let ax = ATT[i][0] + (far ? 6 : 0), ay = ATT[i][1] - (far ? 10 : 0);
-      let kx = KNEE[i][0] + (far ? 6 : 0), ky = KNEE[i][1] - (far ? 8 : 0) + breathe;
-      let fx = FOOT[i][0] + (far ? 6 : 0), fy = FOOT[i][1] - (far ? 8 : 0);
-      if (held) { kx = ax + (kx - ax) * 0.5; ky = ay - 30; fx = ax + (fx - ax) * 0.3; fy = 30 + Math.sin(t * 9 + i) * 3; }
-      else if (inAir) { fy -= 14; kx += 4; }
-      else if (walking) { fx += Math.cos(ph) * 10; fy -= Math.max(0, Math.sin(ph)) * 12; ky -= Math.max(0, Math.sin(ph)) * 4; }
-      if (spit && i === 0 && !held) { kx = 60; ky = -84; fx = 112; fy = -46 + Math.sin(t * 14) * 3; }
-      const s = i < 2 ? 1 : -1;
-      const mx = kx + (fx - kx) * 0.55 + 12 * s, my = ky + (fy - ky) * 0.55;
-      const w = far ? 0.85 : 1;
-      tapered(ax, ay, kx, ky, 15 * w, 11 * w);
-      tapered(kx, ky, mx, my, 11 * w, 8 * w);
-      tapered(mx, my, fx, fy, 8 * w, 3.5 * w);
-      D.fur(p, [ax, ay, kx, ky], 5, 3, s, 0.3); D.fur(p, [kx, ky, mx, my], 5, 3, -s, 0.3);
-      p.circle(kx, ky, 5 * w, true); p.circle(mx, my, 3.5 * w, true);
-      p.line(fx, fy, fx + s * 3, fy + 3); p.line(fx, fy, fx - s * 2, fy + 3);
+      const ph = e.phase * 1.4 + (i % 2 ? Math.PI : 0) + (far ? Math.PI : 0);
+      const step = walking ? Math.sin(ph) * 18 : 0, lift = walking ? Math.max(0, Math.cos(ph)) * 16 : 0;
+      const tw = Math.sin(t * 9 + i * 1.7 + (far ? 2.3 : 0)) * (angry ? 2.6 : 1.1);   // never quite still
+      const fo = far ? -1 : 1;
+      let [ax, ay] = ATT[i], [kx, ky] = KNEE[i], [fx, fy] = FOOT[i];
+      if (far) { ax -= 4; ay -= 8; kx -= 10; ky -= 10; fx -= 14; fy -= 9; }
+      kx += step * 0.4 + tw; ky += tw * 0.6; fx += step; fy -= lift;
+      if (inAir) { fy -= 30; fx += (fx > ax ? -14 : 14); ky += 10; }
+      if (held) { kx = ax + (kx - ax) * 0.55; ky = ay - 40 + Math.sin(t * 11 + i) * 8; fx = ax + (fx - ax) * 0.35 + Math.sin(t * 13 + i * 2) * 10; fy = 40 + Math.cos(t * 12 + i) * 10; }
+      if (e.spitT > 0 && i === 0 && !held) { kx = 112; ky = -112; fx = 172; fy = -62 + Math.sin(t * 16) * 4; }
+      const out = fx > kx ? 1 : -1;
+      const mx = kx + (fx - kx) * 0.42 + out * 16, my = ky + (fy - ky) * 0.42 - 6;
+      const w = far ? 0.82 : 1, col = far ? SB.shade(LEG, 0.35) : LEG, band = far ? SB.shade(BAND, 0.35) : BAND;
+      p.fill = col;
+      D.tube(p, ax, ay, (ax + kx) / 2 - out * 6, (ay + ky) / 2 - 8, kx, ky, 15 * w, 10 * w, 5, true);       // femur
+      D.tube(p, kx, ky, (kx + mx) / 2 + out * 4, (ky + my) / 2 - 2, mx, my, 10 * w, 7 * w, 4, true);        // tibia
+      D.tube(p, mx, my, (mx + fx) / 2 + out * 3, (my + fy) / 2, fx, fy - 4, 7 * w, 3 * w, 5, true);         // metatarsus
+      p.fill = band;
+      p.ellipse(kx, ky, 7 * w, 6 * w, true, 0); p.ellipse(mx, my, 5 * w, 4.5 * w, true, 0); p.ellipse(ax + (kx - ax) * 0.12, ay + (ky - ay) * 0.12, 6 * w, 5 * w, true, 0);
+      if (!far) { bristles([ax, ay, kx, ky], 5, 6, -out); bristles([kx, ky, mx, my], 4.5, 6, out); bristles([mx, my, fx, fy - 4], 3.5, 6, out); }
+      c.save(); c.strokeStyle = '#0d0907'; c.lineWidth *= 1.2; p.curve(fx, fy - 4, fx + out * 4, fy - 1, fx + out * 2, fy + 1); c.restore();   // hooked claw
     };
     for (let i = 3; i >= 0; i--) leg(i, true);
-    // far chelicera and pedipalp
-    p.poly([36, 0, 48, -2, 50, 8, 44, 14, 36, 10], true);
-    // abdomen: big, hairy, patterned; spinnerets at the tip
-    c.save(); c.translate(-42, -12); c.rotate(-0.12);
-    p.ellipse(0, 0, 46, 32, true, 0);
-    const top = []; for (let k = 0; k <= 8; k++) { const a = Math.PI * 1.02 + k * (Math.PI * 0.96 / 8); top.push(Math.cos(a) * 46, Math.sin(a) * 32); }
-    D.fur(p, top, 7, 6, -1, 0.2);
-    p.stroke('#c0392b'); c.lineWidth *= 1.4; for (let k = 0; k < 3; k++) { const x = -22 + k * 16; p.path([x - 7, -14, x, -22, x + 7, -14], false); } c.lineWidth /= 1.4; p.stroke();
-    p.curve(-30, 6, 0, 14, 30, 4); D.hatch(p, -20, 20, 16, 26, 5, 4, -1.2);
-    p.poly([-46, 2, -54, 0, -55, 5, -46, 8], true); p.poly([-46, 8, -53, 8, -53, 13, -45, 13], true);
+    // ---- abdomen: big, pulsing, hairy, with pale chevrons and a red hourglass ----
+    c.save(); c.translate(-50, -8); c.rotate(-0.1);
+    const arx = 64 + pulse, ary = 48 + pulse * 0.6;
+    p.fill = BODY; p.ellipse(0, 0, arx, ary, true, 0);
+    const outline = []; for (let k = 0; k <= 22; k++) { const a = Math.PI * 0.95 + k * (Math.PI * 1.1 / 22); outline.push(Math.cos(a) * arx, Math.sin(a) * ary); }
+    bristles(outline, 7, 5, -1);
+    c.save(); c.globalAlpha *= 0.85;
+    for (let k = 0; k < 4; k++) { const x = -34 + k * 17, wch = 10 - k * 1.5; p.poly([x - wch, -26 + k * 2, x, -16 + k * 2, x + wch, -26 + k * 2, x + wch * 0.6, -21 + k * 2, x, -12 + k * 2, x - wch * 0.6, -21 + k * 2], '#c9bfa6'); }
+    p.poly([-6, 18, 6, 18, 2, 25, 6, 32, -6, 32, -2, 25], '#c0281a');                                        // red hourglass
     c.restore();
-    // cephalothorax
-    p.ellipse(22, -8, 26, 19, true, 0);
-    p.curve(14, -22, 20, -14, 26, -22); p.line(-2, -10, -2, -2);
-    // near chelicera with fang, pedipalp
-    p.poly([40, 4, 52, 2, 54, 12, 48, 18, 40, 14], true);
-    if (angry || spit || mood === 'scared') { p.curve(50, 18, 58, 24, 56, 32); p.curve(44, 14, 48, 22, 42, 30); p.dot(56, 34 + (Math.sin(t * 4) + 1) * 2, 1.2); }
-    else { p.curve(50, 18, 52, 26, 46, 28); }
-    tapered(44, -2, 58, -12, 5, 4); tapered(58, -12, 66, -2, 4, 3); tapered(66, -2, 64, 10, 3, 2);
-    // eyes: two big forward eyes and a cluster of small ones
-    D.eye(p, 40, -14, 3.6, e, 1); D.eye(p, 31, -17, 2.4, e, -1);
-    p.dot(46, -9, 1.4); p.dot(36, -21, 1.2); p.dot(27, -21, 1.1); p.dot(44, -19, 1.2);
+    p.fill = SB.shade(BODY, 0.2); p.ellipse(-arx + 4, 8, 7, 5, true, 0.3); p.ellipse(-arx + 2, 16, 6, 4, true, 0.1);   // spinnerets
+    c.restore();
+    // ---- cephalothorax with radial grooves ----
+    p.fill = BODY; p.ellipse(36, -6, 36, 27, true, -0.05);
+    c.save(); c.globalAlpha *= 0.4; c.strokeStyle = '#4a3a30'; for (let k = 0; k < 6; k++) { const a = -2.6 + k * 0.42; p.line(34, -8, 34 + Math.cos(a) * 30, -8 + Math.sin(a) * 22); } c.restore();
+    bristles([4, -12, 18, -28, 40, -33, 62, -26], 6, 5, -1);
+    // pedipalps
+    p.fill = LEG; D.tube(p, 62, 8, 78, 4, 84, 18, 7, 4, 4, true); D.tube(p, 58, 12, 70, 16, 74, 28, 6, 3.5, 4, true);
+    // ---- near legs over the body ----
     for (let i = 3; i >= 0; i--) leg(i, false);
+    // ---- face in front of the legs: chelicerae and fangs (spread wide and dripping when angry) ----
+    const spread = angry ? 0.5 + Math.sin(t * 7) * 0.15 : 0.1;
+    p.fill = SB.shade(BODY, 0.05); p.ellipse(62, 18, 11, 13, true, 0.2); p.ellipse(54, 20, 10, 12, true, 0.1);
+    bristles([52, 10, 60, 6, 70, 12], 4, 4, -1);
+    for (const [bx, by, sgn] of [[64, 28, 1], [55, 29, -1]]) {
+      c.save(); c.translate(bx, by); c.rotate(sgn * spread);
+      p.poly([-3, 0, 3, 0, 4, 8, 1, 16, -3, 20, -1, 12], '#0b0b0b');
+      c.save(); c.globalAlpha *= 0.55; c.strokeStyle = '#8a8a8a'; c.lineWidth *= 0.7; p.line(1.5, 2, 2, 9); c.restore();
+      if (angry) { const drip = (t * 1.5 + bx) % 1; p.ellipse(-3, 21 + drip * 14, 1.8, 2.6 + drip * 1.5, '#7ddc6a', 0); }
+      c.restore();
+    }
+    // ---- eight glowing eyes: two big, six small ----
+    const EYES = [[56, -16, 5.2], [47, -18, 4.6], [62, -24, 2.8], [41, -26, 2.6], [52, -28, 2.4], [66, -12, 2.2], [37, -18, 2.2], [58, -31, 1.8]];
+    c.save();
+    if (angry) { c.shadowColor = EYE; c.shadowBlur = 10; }
+    const glow = angry ? 1 : 0.75 + Math.sin(t * 3 + e.seed) * 0.15;
+    for (const [x, y, r] of EYES) {
+      if (mood === 'dizzy') { p.line(x - r, y - r, x + r, y + r); p.line(x - r, y + r, x + r, y - r); continue; }
+      if (mood === 'sleep') { p.arc(x, y, r, 0.2, Math.PI - 0.2); continue; }
+      c.globalAlpha = glow; p.circle(x, y, r, EYE); c.globalAlpha = 1;
+      c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(x - r * 0.35 + e.lookX * r * 0.2, y - r * 0.35, Math.max(0.6, r * 0.3), 0, TAU); c.fill();
+    }
+    c.restore();
+    p.fill = BODY;
   };
 
   // ---------- the giant moth: seen from above, wings beating, feathered antennae ----------
@@ -471,7 +505,7 @@
       for (let k = 0; k < 4; k++) p.curve(0, -10, 16 - k * 6, -36 - k * 8, 52 - k * 16, -70 + k * 3);
       // bands and the big eyespot
       p.curve(-22, -54, 12, -66, 56, -70); p.curve(-32, -40, 0, -50, 40, -58);
-      p.circle(20, -52, 10, '#f6d13b'); p.circle(20, -52, 6, '#2b6cb0'); p.circle(23, -55, 2, '#fff');
+      p.circle(20, -52, 10, '#ded6c0'); p.circle(20, -52, 6, '#4a0c08'); p.circle(23, -55, 2, '#fff');
       p.circle(-12, -36, 3.5, '#2b6cb0');
       D.fur(p, [-2, -8, 30, -34], 6, 4, 1, 0.4);
       c.restore();
@@ -486,6 +520,9 @@
     p.fuzz(-64, 0, 6, 4, true, 6);
     // thorax: a ball of fur
     p.fuzz(4, 0, 18, 13, true, 10);
+    p.fill = '#e6dcc0'; p.ellipse(3, 0, 9, 7.5, true, 0); p.ellipse(9, 0, 4, 4.5, true, 0);   // the skull marking
+    c.fillStyle = '#1a1210'; c.beginPath(); c.arc(1, -3, 2.2, 0, TAU); c.arc(1, 3, 2.2, 0, TAU); c.fill(); c.fillRect(6, -2.5, 4, 5);
+    p.fill = p.base;
     p.fuzz(14, 0, 9, 10, true, 7);
     // head, eyes, palps
     p.circle(27, 0, 8, true);
@@ -559,7 +596,7 @@
     c.save(); c.lineWidth = 3; p.line(-20, -90, 22, -92); c.restore();
     if (mood === 'dizzy') { p.line(-16, -88, -6, -78); p.line(-6, -88, -16, -78); p.line(6, -88, 16, -78); p.line(16, -88, 6, -78); }
     else if (mood === 'sleep') { p.line(-16, -84, -6, -84); p.line(6, -84, 16, -84); }
-    else { p.poly([-16, -86, -6, -88, -4, -80, -14, -78], '#1b4d80'); p.poly([4, -88, 16, -86, 14, -78, 6, -80], '#1b4d80'); if (Math.floor(t * 5) % 2) { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 1.2; p.line(-13, -84, -9, -83); p.line(7, -85, 11, -84); c.restore(); } }
+    else { c.save(); c.shadowColor = '#7ff3ff'; c.shadowBlur = 12; p.poly([-16, -86, -6, -88, -4, -80, -14, -78], '#9ff7ff'); p.poly([4, -88, 16, -86, 14, -78, 6, -80], '#9ff7ff'); c.restore(); if (Math.floor(t * 5) % 2) { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 1.2; p.line(-13, -84, -9, -83); p.line(7, -85, 11, -84); c.restore(); } }
     if (angry || throwing || breathing || mood === 'scared') { p.poly([-14, -74, 16, -74, 12, -66, -12, -66], '#1b4d80'); c.save(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; p.zigzag(-12, -74, 14, -74, -3, 6); p.zigzag(-10, -66, 10, -66, 3, 5); c.restore(); }
     else p.zigzag(-12, -72, 14, -72, 3, 7);
     icicles(-8, -66, 18, 3, 8);
@@ -609,7 +646,8 @@
     p.line(hx - 6, hy - 12, hx + 30, hy - 8);
     p.dot(hx + 32, hy - 3, 1.4);
     if (mood === 'dizzy') { p.line(hx + 8, hy - 9, hx + 16, hy - 3); p.line(hx + 16, hy - 9, hx + 8, hy - 3); }
-    else { p.ellipse(hx + 12, hy - 6, 5, 3.6, '#f6d13b', 0); p.line(hx + 12, hy - 9.5, hx + 12, hy - 2.5); }
+    else { c.save(); c.shadowColor = '#ffd23f'; c.shadowBlur = 10; p.ellipse(hx + 12, hy - 6, 5, 3.6, '#ffd23f', 0); c.restore(); c.save(); c.lineWidth *= 1.6; p.line(hx + 12, hy - 9.5, hx + 12, hy - 2.5); c.restore(); }
+    { const dr = (t * 1.2) % 1; c.fillStyle = 'rgba(125,220,106,0.85)'; c.beginPath(); c.ellipse(hx + 27, hy + 16 + dr * 14, 1.6, 2.4 + dr, 0, 0, TAU); c.fill(); }
     if (angry || spit) { c.save(); c.lineWidth *= 1.3; p.line(hx + 4, hy - 12, hx + 20, hy - 10); c.restore(); }
     const open = angry || spit || breathing || mood === 'scared';
     if (open) { p.use('mouth'); p.poly([hx - 4, hy + 8, hx + 30, hy + 4, hx + 36, hy + 6, hx + 30, hy + 20, hx + 6, hy + 22, hx - 6, hy + 14], true); p.use('body'); p.poly([hx + 24, hy + 5, hx + 30, hy + 5, hx + 27, hy + 16], '#fff'); p.poly([hx + 14, hy + 6, hx + 20, hy + 6, hx + 17, hy + 15], '#fff'); }
@@ -693,8 +731,8 @@
     p.use('hair'); p.fuzz(26, -27, 10, 5, true, 7);                                    // curly forelock
     p.use('snout'); p.poly([52, 6, 69, 14, 69, 34, 54, 41, 44, 28], true);
     p.dot(63, 17, 2.4); p.line(48, 34, 64, 32);
-    if (angry || mood === 'scared') {
-      p.circle(32, -8, 4.4, '#ff3b30'); p.dot(33.5, -8, 1.7);
+    if (mood !== 'dizzy' && mood !== 'sleep') {
+      c.save(); c.shadowColor = '#ff2a14'; c.shadowBlur = 10; p.circle(32, -8, 4.4, '#ff3b30'); c.restore(); p.dot(33.5, -8, 1.7);
       c.save(); c.lineWidth *= 1.8; p.line(20, -18, 42, -12); c.restore();
     } else D.eye(p, 32, -8, 3.6, e, 1);
     c.save(); c.strokeStyle = '#d4a017'; c.lineWidth *= 1.5; p.circle(63, 37, 6, false); c.restore();   // nose ring
@@ -704,98 +742,118 @@
     p.use('body');
   };
 
-  // ---------- the giant scorpion: three tails, two huge pincers ----------
-  D.scorpTips = [[-103, -96], [-69, -82], [-37, -64]];   // template coords of the three stingers at rest
-  D.scorpion = function () { return { w: 340, h: 200, draw(p, e, t) { p.ctx.translate(-33, 14); D.drawScorpion(p, e, t); } }; };
+  // ---------- the giant scorpion: a glossy black emperor scorpion, three venom-glowing tails, huge pincers ----------
+  const SK = 1.38;   // drawn larger than its working coordinates
+  D.scorpTips = [[-103 * SK, -96 * SK], [-69 * SK, -82 * SK], [-37 * SK, -64 * SK]];   // template coords of the three stingers at rest
+  D.scorpion = function () { return { w: 340 * SK, h: 200 * SK, draw(p, e, t) { p.ctx.scale(SK, SK); p.ctx.translate(-33, 14); D.drawScorpion(p, e, t); } }; };
   D.drawScorpion = function (p, e, t) {
     const c = p.ctx, mood = e.mood, held = e.held;
     const walking = e.moving && e.grounded && !held;
-    const angry = mood === 'angry' || e.mode === 'hunt';
-    const G = 84, ph = e.phase * 2;
-    p.use('body');
-    // walking leg: hip on the body, knee high above it, foot planted wide (front legs reach forward, back legs back)
+    const angry = mood === 'angry' || e.mode === 'hunt' || e.stingQ > 0 || e.clawT > 0;
+    const G = 84, ph = e.phase * 2, pal = p.pal || {};
+    const BODY = pal.body || '#141418', FAR = pal.far || '#0b0b0e', LEG = pal.leg || '#1d1b22', BAND = pal.band || '#5a1d14', VENOM = '#7dff6a';
+    const gloss = (x0, y0, x1, y1, a) => { c.save(); c.globalAlpha *= a || 0.55; c.strokeStyle = 'rgba(190,205,230,0.9)'; c.lineWidth *= 1.3; p.curve(x0, y0, (x0 + x1) / 2, Math.min(y0, y1) - 3, x1, y1); c.restore(); };
+    const bristles = (pts, len, n, side) => { c.save(); c.strokeStyle = '#050506'; c.lineWidth = Math.max(0.7, c.lineWidth * 0.5); D.fur(p, pts, n, len, side, 0.3); c.restore(); };
+    const spikes = (x0, y0, x1, y1, n, len, side) => { const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1, nx = -dy / d * side, ny = dx / d * side; p.fill = '#08080a'; for (let k = 1; k <= n; k++) { const u = k / (n + 1), x = x0 + dx * u, y = y0 + dy * u; p.poly([x - dx / d * 2, y - dy / d * 2, x + nx * len + dx / d * 2, y + ny * len + dy / d * 2, x + dx / d * 2, y + dy / d * 2], true); } };
+    // walking leg: spiny, red-banded, twitching
     const leg = (ax, ay, i, far) => {
       const a = ph + i * 1.6 + (far ? Math.PI : 0);
       const step = walking ? Math.sin(a) * 12 : held ? Math.sin(t * 12 + i) * 8 : 0;
       const lift = walking ? Math.max(0, Math.cos(a)) * 9 : held ? 16 : 0;
+      const tw = Math.sin(t * 8.5 + i * 1.9 + (far ? 2 : 0)) * (angry ? 2.2 : 0.9);
       const spread = (1.5 - i) * 24;
-      const kx = ax + spread * 0.55 + step * 0.4, ky = ay - 34 - (far ? 6 : 0) + Math.abs(i - 1.5) * 4;
+      const kx = ax + spread * 0.55 + step * 0.4 + tw, ky = ay - 34 - (far ? 6 : 0) + Math.abs(i - 1.5) * 4 + tw * 0.5;
       const fx = ax + spread * 1.5 + step, fy = G - lift - (far ? 6 : 0);
-      p.use(far ? 'far' : 'leg');
+      const mx = kx + (fx - kx) * 0.5 + (fx > kx ? 5 : -5), my = ky + (fy - ky) * 0.45;
+      p.fill = far ? FAR : LEG;
       D.tube(p, ax, ay, (ax + kx) / 2 - spread * 0.1, ky - 8, kx, ky, far ? 9 : 10, 8, 4, true);
-      D.tube(p, kx, ky, (kx + fx) / 2 + spread * 0.15, (ky + fy) / 2 - 6, fx, fy, 8, 2.5, 5, true);
-      p.circle(kx, ky, far ? 4 : 4.5, true);
-      p.use('body');
+      D.tube(p, kx, ky, (kx + mx) / 2, (ky + my) / 2 - 3, mx, my, 8, 6, 4, true);
+      D.tube(p, mx, my, (mx + fx) / 2, (my + fy) / 2, fx, fy, 6, 2, 4, true);
+      p.fill = far ? SB.shade(BAND, 0.4) : BAND; p.ellipse(kx, ky, 5, 4.5, true, 0); p.ellipse(mx, my, 4, 3.6, true, 0);
+      if (!far) { spikes(ax, ay, kx, ky, 2, 4, -1); bristles([kx, ky, mx, my, fx, fy], 3, 5, fx > kx ? 1 : -1); }
+      c.save(); c.strokeStyle = '#050506'; p.line(fx, fy, fx + (fx > ax ? 4 : -4), fy + 1); c.restore();
     };
-    // pedipalp: upper arm, forearm, and the big pincer held forward
+    // pedipalp: knobbly arm segments with spikes, a swollen granular hand, serrated spiked fingers
     const claw = (far) => {
       const ck = e.clawT > 0 ? Math.sin((1 - e.clawT / 0.4) * Math.PI) : 0;
-      const open = ck > 0 ? ck : angry ? 0.35 + Math.sin(t * 6 + (far ? 1.3 : 0)) * 0.18 : 0.12;
+      const open = ck > 0 ? ck : angry ? 0.42 + Math.sin(t * 6 + (far ? 1.3 : 0)) * 0.2 : 0.14 + Math.sin(t * 1.3 + (far ? 1 : 0)) * 0.05;
       const reach = ck * 30, wig = held ? Math.sin(t * 10 + (far ? 1 : 0)) * 8 : Math.sin(t * 1.8 + (far ? 2 : 0) + e.seed) * 2;
       const bx = 82, by = far ? 2 : 12;
       const ex = 104 + reach * 0.4 + (far ? -6 : 0), ey = (far ? -26 : -16) + wig;
       const hx = 128 + reach + (far ? -10 : 0), hy = (far ? -24 : -12) + wig;
-      p.use(far ? 'far' : 'body');
-      D.slab(p, bx, by, ex, ey, far ? 13 : 15); D.slab(p, ex, ey, hx - 10, hy, far ? 14 : 16);
+      const col = far ? FAR : BODY;
+      p.fill = col; D.slab(p, bx, by, ex, ey, far ? 13 : 15); D.slab(p, ex, ey, hx - 10, hy, far ? 14 : 16);
       p.circle(ex, ey, far ? 6 : 7, true);
-      c.save(); c.translate(hx, hy); c.rotate(-0.1); c.scale(1.3, 1.3);
-      p.ellipse(6, 0, 26, 17, true, 0);                                   // the swollen hand
-      p.poly([22, 4, 62, 8, 68, 2, 28, -3], true);                         // fixed finger
-      p.zigzag(26, 3, 58, 6, -2.5, 7);
-      c.save(); c.translate(22, -7); c.rotate(-open * 0.75);
-      p.poly([0, 0, 40, -7, 47, 1, 4, 8], true);                           // movable finger
-      p.zigzag(4, 5, 40, 0, 2.5, 7);
+      if (!far) { spikes(bx, by, ex, ey, 2, 5, 1); spikes(ex, ey, hx - 10, hy, 2, 5, -1); gloss(ex + 2, ey - 6, hx - 14, hy - 7, 0.45); }
+      c.save(); c.translate(hx, hy); c.rotate(-0.1); c.scale(1.45, 1.45);
+      p.fill = col; p.ellipse(6, 0, 26, 17, true, 0);                                     // the swollen hand
+      if (!far) { c.save(); c.globalAlpha *= 0.55; for (let k = 0; k < 9; k++) p.dot(-12 + (k % 3) * 9 + (k > 5 ? 3 : 0), -8 + Math.floor(k / 3) * 7, 1.3); c.restore(); gloss(-12, -9, 20, -10, 0.6); }
+      p.fill = col; p.poly([22, 4, 62, 8, 68, 2, 28, -3], true);                         // fixed finger
+      p.fill = '#d9d2c0'; c.save(); c.lineWidth *= 0.6; p.zigzag(26, 3, 60, 6, -3, 9); c.restore();
+      c.save(); c.translate(22, -7); c.rotate(-open * 0.8);
+      p.fill = col; p.poly([0, 0, 40, -7, 47, 1, 4, 8], true);                           // movable finger
+      c.save(); c.lineWidth *= 0.6; p.zigzag(4, 5, 42, 0, 3, 9); c.restore();
+      if (!far) spikes(4, -1, 40, -8, 3, 4, 1);
       c.restore();
-      c.save(); c.globalAlpha = 0.5; p.curve(-14, -8, 4, -15, 22, -8); p.dot(-4, 4, 1.4); p.dot(8, 7, 1.4); c.restore();
+      if (!far) bristles([-18, -10, 4, -17, 24, -12], 3.5, 4, -1);
       c.restore();
-      p.use('body');
     };
-    // three tails: each arcs back, up and forward over the body, ending in a bulb and a curved stinger
+    // three tails: spiked segments arching over the body, ending in venom bulbs that glow and drip
     const BASE = [[-74, -2], [-76, 6], [-72, 14]];
     const REST = [{ c1: [-132, -20], c2: [-150, -128], t: [-70, -110] }, { c1: [-124, 0], c2: [-128, -110], t: [-36, -96] }, { c1: [-112, 14], c2: [-104, -96], t: [-4, -78] }];
     if (!e.tips) e.tips = [];
     const tail = (i) => {
       const b = BASE[i], r = REST[i];
-      const sway = Math.sin(t * 2 + i * 2.1 + e.seed) * 5 + (held ? Math.sin(t * 9 + i) * 10 : 0) + (angry ? Math.sin(t * 8 + i) * 2.5 : 0);
+      const sway = Math.sin(t * 2 + i * 2.1 + e.seed) * 5 + (held ? Math.sin(t * 9 + i) * 10 : 0) + (angry ? Math.sin(t * 8 + i) * 3 : 0);
       const c1 = [r.c1[0], r.c1[1]], c2 = [r.c2[0] + sway * 0.5, r.c2[1] + sway * 0.4];
       let tx = r.t[0] + sway, ty = r.t[1] + sway * 0.6;
       const k = e.tailT && e.tailT[i] > 0 ? Math.sin((1 - e.tailT[i] / 0.35) * Math.PI) : 0;
       if (k > 0) { c2[0] += 70 * k; c2[1] -= 30 * k; tx += (175 - tx) * k; ty += (20 - ty) * k; }   // strike forward over the head
       const P = u => { const m = 1 - u; return [m * m * m * b[0] + 3 * m * m * u * c1[0] + 3 * m * u * u * c2[0] + u * u * u * tx, m * m * m * b[1] + 3 * m * m * u * c1[1] + 3 * m * u * u * c2[1] + u * u * u * ty]; };
-      const n = 7;
-      p.use('body');
-      for (let s = 0; s < n; s++) {
-        const u0 = s / n, u1 = (s + 1) / n, A = P(u0), Bp = P(u1);
-        const x = (A[0] + Bp[0]) / 2, y = (A[1] + Bp[1]) / 2, dx = Bp[0] - A[0], dy = Bp[1] - A[1];
-        const rad = 15 - s * 1.2;
-        p.ellipse(x, y, Math.hypot(dx, dy) * 0.66, rad, true, Math.atan2(dy, dx));
-        c.save(); c.globalAlpha = 0.45; p.dot(x - dy * 0.15, y + dx * 0.15, 1.2); c.restore();
+      const n = 7, col = i === 1 ? BODY : SB.mixColor(BODY, '#000', 0.25);
+      for (let sI = 0; sI < n; sI++) {
+        const A = P(sI / n), Bp = P((sI + 1) / n);
+        const x = (A[0] + Bp[0]) / 2, y = (A[1] + Bp[1]) / 2, dx = Bp[0] - A[0], dy = Bp[1] - A[1], d = Math.hypot(dx, dy) || 1;
+        const rad = 15 - sI * 1.2, ang = Math.atan2(dy, dx), nx = dy / d, ny = -dx / d;
+        p.fill = col; p.ellipse(x, y, d * 0.66, rad, true, ang);
+        p.fill = '#08080a'; p.poly([x + nx * rad * 0.8 - dx * 0.12, y + ny * rad * 0.8 - dy * 0.12, x + nx * (rad + 6), y + ny * (rad + 6), x + nx * rad * 0.8 + dx * 0.12, y + ny * rad * 0.8 + dy * 0.12], true);   // a spine on each segment
+        c.save(); c.globalAlpha *= 0.5; c.strokeStyle = 'rgba(190,205,230,0.9)'; p.arc(x, y, rad * 0.6, ang - 2.2, ang - 1.2); c.restore();
       }
       const Q = P(0.97), ang = Math.atan2(ty - Q[1], tx - Q[0]);
       c.save(); c.translate(tx, ty); c.rotate(ang);
-      p.use('telson'); p.ellipse(7, 0, 13, 9, true, 0);
-      p.use('stinger'); p.poly([16, -5, 34, 2, 41, 15, 30, 6, 16, 5], true);
-      if (angry && Math.floor(t * 3 + i) % 3 === 0) p.circle(40, 20, 2.4, '#7bd88f');
+      c.save(); if (angry) { c.shadowColor = VENOM; c.shadowBlur = 12; }
+      const vg = c.createRadialGradient(5, -3, 1, 7, 0, 14); vg.addColorStop(0, '#d9ffcc'); vg.addColorStop(0.35, angry ? '#5ee84a' : '#3fae35'); vg.addColorStop(1, '#14400f');
+      c.fillStyle = vg; c.beginPath(); c.ellipse(7, 0, 13, 9.5, 0, 0, TAU); c.fill(); c.strokeStyle = '#0a1a08'; c.stroke();   // glowing venom bulb
       c.restore();
-      e.tips[i] = [tx - 33, ty + 14];
-      p.use('body');
+      p.fill = '#050506'; p.poly([16, -5, 34, 2, 42, 16, 30, 6, 16, 5], true);         // black hooked stinger
+      if (angry) { const drip = (t * 1.3 + i * 0.37) % 1; c.fillStyle = VENOM; c.globalAlpha *= 1 - drip * 0.6; c.beginPath(); c.ellipse(41, 18 + drip * 18, 2, 2.8 + drip * 1.5, 0, 0, TAU); c.fill(); }
+      c.restore();
+      e.tips[i] = [(tx - 33) * SK, (ty + 14) * SK];
     };
     for (let i = 0; i < 4; i++) leg(32 - i * 22, 16, i, true);
     claw(true);
     for (let i = 0; i < 3; i++) tail(i);
-    // mesosoma: overlapping armour plates
+    // mesosoma: overlapping glossy armour plates with a spiked keel along the back
+    p.fill = BODY;
     p.poly([-82, 16, -78, -6, -50, -18, 0, -22, 40, -18, 52, 6, 48, 34, 0, 42, -50, 40, -78, 32], true);
-    for (let k = 0; k < 6; k++) { const x = -64 + k * 18; p.curve(x, -18, x + 6, 12, x, 40); }
-    c.save(); c.globalAlpha = 0.45; p.curve(-72, -2, -10, -16, 42, -6); c.restore();
-    D.hatch(p, -68, 32, 42, 36, 8, 5, -1.4);
-    // prosoma (carapace) with eyes and jaws
-    p.poly([38, -16, 62, -20, 84, -10, 94, 10, 88, 32, 50, 38, 40, 20], true);
-    c.save(); c.globalAlpha = 0.5; p.line(58, -18, 62, 32); c.restore();
-    D.eye(p, 70, -10, 3.4, e, 1);
-    p.dot(82, -6, 1.5); p.dot(86, -2, 1.3); p.dot(84, 2, 1.2);
-    p.poly([90, 12, 104, 10, 104, 22, 90, 26], true);
+    for (let k = 0; k < 6; k++) { const x = -64 + k * 18; c.save(); c.strokeStyle = '#2c2c34'; p.curve(x, -18, x + 6, 12, x, 40); c.restore(); gloss(x - 14, -14 + Math.abs(k - 2.5), x - 3, -16 + Math.abs(k - 2.5), 0.5); }
+    p.fill = '#08080a'; for (let k = 0; k < 7; k++) { const x = -70 + k * 17; p.poly([x - 3, -16 - (k === 3 ? 1 : 0), x + 1, -26 - (k % 2) * 3, x + 4, -17], true); }
+    bristles([-78, 34, -40, 41, 0, 43, 40, 36], 4, 7, 1);
+    // prosoma (carapace): glowing red median eyes, lateral eye clusters, twitching mouth pincers
+    p.fill = BODY; p.poly([38, -16, 62, -20, 84, -10, 94, 10, 88, 32, 50, 38, 40, 20], true);
+    gloss(44, -14, 84, -8, 0.6);
+    c.save(); c.strokeStyle = '#2c2c34'; p.line(58, -18, 62, 32); c.restore();
+    const blink = mood === 'sleep' || mood === 'dizzy';
+    c.save(); if (angry) { c.shadowColor = '#ff2a14'; c.shadowBlur = 9; }
+    const eyeAt = (x, y, r) => { if (blink) { p.line(x - r, y, x + r, y); return; } c.globalAlpha = angry ? 1 : 0.85; p.circle(x, y, r, '#ff2a14'); c.globalAlpha = 1; c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(x - r * 0.35, y - r * 0.35, Math.max(0.5, r * 0.3), 0, TAU); c.fill(); };
+    eyeAt(66, -14, 3.6); eyeAt(73, -15, 3.4);
+    for (const [x, y] of [[84, -6], [88, -2], [86, 2], [82, -9], [90, 3]]) eyeAt(x, y, 1.5);
+    c.restore();
+    const mw = Math.sin(t * 11 + e.seed) * (angry ? 0.35 : 0.12);
+    for (const [bx, by, s2] of [[92, 12, 1], [92, 20, -1]]) { c.save(); c.translate(bx, by); c.rotate(s2 * mw); p.fill = BAND; p.poly([0, -4, 12, -3, 15, 0, 12, 3, 0, 4], true); p.line(12, -1, 16, -3); c.restore(); }
     for (let i = 0; i < 4; i++) leg(36 - i * 22, 24, i, false);
     claw(false);
+    p.fill = BODY;
   };
 
   // ---------- the wasp swarm: a queen wasp leading a swarm of real, individually flying wasps ----------
@@ -839,7 +897,7 @@
     p.use('body'); p.circle(12, -10, 3, true); p.circle(24, -12, 2.5, true);
     // head
     p.ellipse(40, -6, 12, 13, true, 0);
-    p.use('dark'); p.ellipse(43, -10, 5, 8, true, 0.2); p.circle(44.5, -13, 1.6, '#fff');
+    p.use('dark'); c.save(); c.shadowColor = '#ff2a14'; c.shadowBlur = 9; p.ellipse(43, -10, 5, 8, '#b3140c', 0.2); c.restore(); p.circle(44.5, -13, 1.6, '#fff');
     if (angry) { c.save(); c.lineWidth *= 1.6; p.line(36, -22, 50, -16); c.restore(); }
     p.poly([46, 4, 56, 8, 48, 10], true); p.poly([44, 6, 52, 13, 44, 12], true);   // mandibles
     p.curve(42, -18, 52, -34, 62, -36); p.curve(38, -18, 44, -36, 54, -42);      // antennae
@@ -892,11 +950,125 @@
     p.use('dark'); p.ellipse(66, 10, 11, 10, true, 0);
     p.use('horn'); D.tube(p, 70, 4, 96, -6, 92, -46, 12, 4, 8, true);
     p.poly([90, -44, 98, -56, 94, -42], true); p.poly([88, -42, 84, -56, 92, -44], true);
-    if (angry) { p.circle(70, 6, 3.2, '#ff3b30'); p.dot(70.5, 6, 1.2); } else D.eye(p, 70, 6, 2.8, e, 1);
+    if (mood !== 'dizzy' && mood !== 'sleep') { c.save(); c.shadowColor = '#ff2a14'; c.shadowBlur = 9; p.circle(70, 6, 3.4, '#ff3b30'); c.restore(); p.dot(70.5, 6, 1.2); } else D.eye(p, 70, 6, 2.8, e, 1);
     p.line(74, 16, 80, 20); p.line(76, 14, 82, 15);
     p.use('gold'); p.poly([32, -20, 32, -30, 36, -24, 40, -32, 44, -24, 48, -29, 48, -19], true);   // king's crown
     for (let i = 0; i < 3; i++) leg(32 - i * 30, i, false);
     p.use('body');
+  };
+
+  // ---------- the giant praying mantis: raised neck, triangle head, spiked folding forelegs ----------
+  D.mantisClaw = [96, -26];   // template coords where the forelegs hold a grabbed victim
+  D.mantis = function () { return { w: 250, h: 230, draw(p, e, t) { p.ctx.translate(-20, 12); D.drawMantis(p, e, t); } }; };
+  D.drawMantis = function (p, e, t) {
+    const c = p.ctx, mood = e.mood, held = e.held;
+    const walking = e.moving && e.grounded && !held;
+    const angry = mood === 'angry' || e.mode === 'hunt';
+    const inAir = !e.grounded && !held;
+    const G = 100, ph = e.phase * 1.6;
+    if (e.camo > 0) c.globalAlpha *= 1 - e.camo * 0.72;                       // camouflage
+    const sway = held ? Math.sin(t * 10) * 6 : Math.sin(t * 1.3 + e.seed) * 3; // mantises rock like a leaf in the wind
+    const thin = (k) => { c.save(); c.lineWidth *= k; };
+    // walking leg: thin femur up to a high knee, tibia down, then a jointed tarsus with a little claw
+    const leg = (ax, ay, kx, ky, fx, fy, far) => {
+      p.use(far ? 'far' : 'leg'); p.stroke(SB.shade(p.fill, 0.55)); thin(0.7);       // thin legs get a dark-green outline, not black
+      D.tube(p, ax, ay, (ax + kx) / 2, (ay + ky) / 2 - 3, kx, ky, far ? 6.5 : 7.5, 5, 5, true);
+      D.tube(p, kx, ky, (kx + fx) / 2 + (fx > kx ? 2 : -2), (ky + fy) / 2, fx, fy - 5, 4.6, 3, 6, true);
+      const dir = fx > ax ? 1 : -1;
+      p.path([fx, fy - 5, fx + dir * 2, fy - 1.5, fx + dir * 5, fy, fx + dir * 8, fy - 0.5], false); p.line(fx + dir * 8, fy - 0.5, fx + dir * 9.5, fy - 2.5);
+      c.restore(); p.dot(kx, ky, far ? 1.4 : 1.8); p.stroke();
+      p.use('body');
+    };
+    const walkLegs = (far) => {
+      const a = ph + (far ? Math.PI : 0), up = inAir ? 16 : held ? 18 : 0, fo = far ? 6 : 0;
+      const s1 = walking ? Math.sin(a) * 11 : 0, l1 = walking ? Math.max(0, Math.cos(a)) * 9 : 0;
+      const s2 = walking ? Math.sin(a + Math.PI) * 11 : 0, l2 = walking ? Math.max(0, Math.cos(a + Math.PI)) * 9 : 0;
+      leg(6, 20, 36 + s1 * 0.3, -2 - fo, 58 + s1, G - l1 - up - fo, far);        // middle leg
+      leg(-10, 22, -50 + s2 * 0.3, -4 - fo, -92 + s2, G - l2 - up - fo, far);    // hind leg
+    };
+    // raptorial foreleg: long coxa hanging from the "shoulder", a thick femur lined with spines,
+    // and a spined tibia that folds back against it like a pocket knife, ending in a hook
+    const foreleg = (far) => {
+      const sk = e.strikeT > 0 ? Math.min(1, (0.3 - e.strikeT) / 0.12) : 0;
+      const sl = e.slashT > 0 ? Math.sin((1 - e.slashT / 0.35) * Math.PI) : 0;
+      const o = far ? -5 : 0, bx = 48 + sway * 0.45 + o, by = -56 + o;
+      let cx = bx + 8, cy = by + 30, fx = 92, fy = -64, tx = 70, ty = -38;
+      if (e.grabbed) { fx = 112; fy = -54; tx = 120; ty = -28; }
+      else if (sk > 0) { fx = 92 + 40 * sk; fy = -64 + 18 * sk; tx = 70 + 94 * sk; ty = -38 - 6 * sk; }
+      else if (sl > 0) { fx = 92 + 22 * sl; fy = -64 - 36 * sl; tx = 70 + 78 * sl; ty = -38 - (far ? 10 : -6) * sl; }
+      else if (held) { fx = 84; fy = -88 + Math.sin(t * 12 + o) * 6; tx = 102; ty = -98; }
+      else if (angry) { fx = 98; fy = -78; tx = 82; ty = -52; }               // raised, ready to strike
+      fx += sway * 0.5 + o; tx += sway * 0.5 + o; fy += o; ty += o;
+      p.use(far ? 'far' : 'body');
+      D.tube(p, bx, by, bx + 2, (by + cy) / 2, cx, cy, far ? 7 : 8.5, far ? 6 : 7, 4, true);   // coxa
+      p.circle(cx, cy, far ? 3.2 : 3.8, true);                                                  // trochanter
+      // femur: swollen in the middle, spines along the inner edge
+      const fdx = fx - cx, fdy = fy - cy, fl = Math.hypot(fdx, fdy) || 1, ux = fdx / fl, uy = fdy / fl, nx = -uy, ny = ux;
+      const fw = far ? 6 : 7.5, side = (ny > 0 ? 1 : -1);                                       // spines on the side facing down/inward
+      p.poly([cx + nx * fw * 0.6, cy + ny * fw * 0.6, cx + fdx * 0.45 + nx * fw, cy + fdy * 0.45 + ny * fw, fx + nx * fw * 0.5, fy + ny * fw * 0.5,
+        fx - nx * fw * 0.5, fy - ny * fw * 0.5, cx + fdx * 0.45 - nx * fw, cy + fdy * 0.45 - ny * fw, cx - nx * fw * 0.6, cy - ny * fw * 0.6], true);
+      thin(0.75);
+      for (let k = 1; k <= 7; k++) { const u = 0.12 + k * 0.11, w = fw * (0.55 + 0.45 * Math.sin(u * Math.PI)), big = k === 3 || k === 6 ? 1.7 : 1;
+        const x = cx + fdx * u + nx * side * w, y = cy + fdy * u + ny * side * w;
+        p.line(x, y, x + nx * side * 4 * big + ux * 1.5, y + ny * side * 4 * big + uy * 1.5); }
+      c.restore();
+      // tibia with fine spines and a hooked tip, plus the little tarsus
+      const tdx = tx - fx, tdy = ty - fy, tl = Math.hypot(tdx, tdy) || 1, vx = tdx / tl, vy = tdy / tl, mx = -vy, my = vx;
+      D.tube(p, fx, fy, (fx + tx) / 2, (fy + ty) / 2, tx, ty, far ? 5 : 6, far ? 3.5 : 4, 5, true);
+      thin(0.7);
+      const tside = (mx * nx + my * ny) > 0 ? side : -side;
+      for (let k = 1; k <= 5; k++) { const u = k / 6, x = fx + tdx * u + mx * tside * 2.5, y = fy + tdy * u + my * tside * 2.5; p.line(x, y, x + mx * tside * 3 - vx, y + my * tside * 3 - vy); }
+      c.restore();
+      p.curve(tx, ty, tx + vx * 6 + mx * tside * 2, ty + vy * 6 + my * tside * 2, tx + vx * 4 + mx * tside * 6, ty + vy * 4 + my * tside * 6);   // hook
+      thin(0.7); p.path([tx - vx * 4, ty - vy * 4, tx - vx * 4 - mx * tside * 6, ty - vy * 4 - my * tside * 6 + 3, tx - vx * 6 - mx * tside * 9, ty - vy * 6 - my * tside * 9 + 7], false); c.restore();   // tarsus
+      p.dot(fx, fy, far ? 2 : 2.4);
+      p.use('body');
+    };
+    walkLegs(true);
+    foreleg(true);
+    // abdomen: widest in the middle, tapering, the tip tilted up; pale underside with segment lines
+    p.use('body');
+    const ab = [-4, 12, -30, 4, -70, 2, -104, 6, -122, 12, -128, 8, -126, 18, -110, 28, -76, 34, -40, 32, -14, 24];
+    p.poly(ab, true);
+    p.use('belly'); p.poly([-14, 24, -40, 32, -76, 34, -110, 28, -122, 21, -100, 24, -70, 27, -36, 24], true);
+    c.save(); c.globalAlpha *= 0.55; for (let k = 0; k < 7; k++) { const x = -26 - k * 13; p.line(x, 24 + Math.min(4, k * 0.8), x - 2, 31 + Math.min(3, k * 0.4)); } c.restore();
+    D.hatch(p, -110, 26, -30, 28, 9, 3, -1.2);
+    // wings: leathery forewings (tegmina) folded over the abdomen with a vein network, or spread while leaping
+    p.use('wing');
+    if (inAir && e.leapT > 0) {
+      const f = Math.sin(t * 40);
+      c.save(); c.globalAlpha *= 0.7;
+      p.ellipse(-34, -30 - f * 8, 50, 19, true, -0.5 - f * 0.25); p.ellipse(-50, -20 - f * 5, 44, 16, true, -0.8 - f * 0.2);
+      thin(0.6); for (let k = 0; k < 5; k++) p.line(-4, -8, -60 - k * 6, -46 + k * 9 - f * 6); c.restore();
+      c.restore();
+    } else {
+      p.poly([-2, 6, -24, -2, -62, -4, -100, 0, -120, 8, -106, 14, -66, 14, -28, 12], true);
+      thin(0.6); c.save(); c.globalAlpha *= 0.6;
+      p.curve(-4, 7, -60, 2, -116, 8);
+      for (let k = 0; k < 7; k++) { const x = -18 - k * 14; p.line(x, 4 - (k > 4 ? 1 : 0), x - 12, 11 + (k > 4 ? 0 : 1)); p.line(x - 4, 5, x - 10, 1); }
+      c.restore(); c.restore();
+      p.ellipse(-36, 4, 4, 2.2, '#e8f5c8', -0.1);                                        // stigma spot
+    }
+    walkLegs(false);
+    // meso/metathorax, then the long slim prothorax that widens where the forelegs attach
+    p.use('body');
+    p.ellipse(-2, 15, 15, 9, true, -0.15);
+    D.tube(p, 4, 12, 22, -18 + sway, 46 + sway * 0.45, -58, 11, 7, 8, true);
+    p.ellipse(47 + sway * 0.45, -57, 8.5, 6.5, true, -0.9);
+    p.use('belly'); D.tube(p, 8, 18, 24, -12 + sway, 46 + sway * 0.45, -50, 4, 3, 6, true); p.use('body');
+    // head: rounded triangle with big bulging compound eyes on top and the mouth at the point
+    const hx = 58 + sway * 0.5, hy = -76;
+    thin(0.55); c.save(); c.globalAlpha *= 0.9; p.stroke('#2f5a20');
+    p.curve(hx + 4, hy - 13, hx + 18, hy - 46, hx + 50, hy - 56); p.curve(hx, hy - 13, hx + 8, hy - 50, hx + 36, hy - 66);   // thin antennae
+    c.restore(); c.restore();
+    p.poly([hx - 9, hy - 5, hx - 3, hy - 13, hx + 9, hy - 15, hx + 16, hy - 8, hx + 13, hy + 4, hx + 7, hy + 15, hx + 1, hy + 9, hx - 5, hy + 3], true);
+    p.use('eye'); c.save(); c.shadowColor = p.fill; c.shadowBlur = 10; p.ellipse(hx + 7, hy - 7, 7.5, 8.5, true, 0.3); c.restore();
+    c.save(); c.globalAlpha *= 0.45; p.arc(hx + 7, hy - 7, 5.5, Math.PI + 0.5, Math.PI + 1.6); c.restore();
+    p.dot(hx + 7 + e.lookX * 2.2, hy - 7 + e.lookY * 2.2, 1.9);              // the dark "pseudopupil" that seems to follow you
+    p.dot(hx + 1, hy - 12, 0.9); p.dot(hx + 4, hy - 13.5, 0.9);             // ocelli
+    if (angry) { thin(1.7); p.line(hx - 1, hy - 17, hx + 15, hy - 13); c.restore(); }
+    p.use('body'); thin(0.7); p.line(hx + 7, hy + 15, hx + 10, hy + 20); p.line(hx + 5, hy + 14, hx + 4, hy + 20); c.restore();   // palps
+    foreleg(false);
   };
 
   // ---------- stinger (what the giant scorpion fires; you can type it too) ----------
@@ -927,12 +1099,22 @@
   });
 
   // ---------- boss definitions ----------
-  const B = (name, spec) => SB.def(name, SB.merge({
-    cat: 'boss', boss: true, creature: true, move: 'walk', temper: 'hostile', bounce: 0.05, friction: 6, huntR: 720,
-    tags: ['boss', 'monster', 'big', 'scary', 'villain', 'predator'], fears: [], hunts: [], eats: [], heldMood: 'angry'
-  }, spec));
+  const B = (name, spec) => {
+    const K = spec.drawK || 1;
+    if (K !== 1) {
+      const inner = spec.t;
+      spec = Object.assign({}, spec, { t: { w: inner.w * K, h: inner.h * K, draw(p, e, t) { p.ctx.scale(K, K); inner.draw(p, e, t); } } });
+      spec.mass = Math.round((spec.mass || 50) * K * K * 0.8); spec.hp = Math.round((spec.hp || 40) * (1 + (K - 1) * 0.6));
+    }
+    return SB.def(name, SB.merge({
+      cat: 'boss', boss: true, creature: true, move: 'walk', temper: 'hostile', bounce: 0.05, friction: 6, huntR: 720,
+      tags: ['boss', 'monster', 'big', 'scary', 'villain', 'predator'], fears: [], hunts: [], eats: [], heldMood: 'angry'
+    }, spec));
+  };
+  const ks = e => e.scale * (e.def.drawK || 1);   // drawing scale: where mouths, eyes and hands really are
 
   B('kraken', {
+    drawK: 1.4,
     t: D.kraken(), aliases: ['the kraken', 'giant octopus', 'giant squid', 'sea monster', 'sea beast', 'kracken', 'craken', 'cthulhu', 'leviathan', 'tentacle monster'],
     move: 'crawl', speed: 55, mass: 90, hp: 45, jump: 200, tags: ['sea', 'wet'], weak: ['fire', 'hot'], special: 'tentacles',
     hunts: ['boat', 'ship', 'pirate', 'sailor', 'fish', 'human'], eats: ['boat', 'ship', 'fish'],
@@ -943,6 +1125,7 @@
     onHurt(e, W) { W.burst('ink', e.x, e.y + 20, 8, 160, { size: 9, life: 0.9, g: 300 }); if (Math.random() < 0.4) e.say('*INK!*'); }
   });
   B('mega robot', {
+    drawK: 1.35,
     t: D.megaRobot(), aliases: ['giant robot', 'megabot', 'mecha', 'mech', 'robot boss', 'war robot', 'battle robot', 'huge robot', 'big robot', 'killer robot', 'evil robot', 'megatron', 'megarobot', 'titan robot', 'giant mech'],
     speed: 60, mass: 120, hp: 50, jump: 260, tags: ['robot', 'metal', 'machine'], weak: ['water', 'magnet', 'lightning', 'electric'], special: 'laser',
     hunts: ['human', 'hero', 'animal', 'monster', 'vehicle', 'robot'], eats: ['battery'],
@@ -953,6 +1136,7 @@
     onHurt(e, W) { W.burst('spark', e.x + (Math.random() - 0.5) * e.w * 0.5, e.y, 6, 180, { size: 6 }); }
   });
   B('king kong', {
+    drawK: 1.35,
     t: D.kong(), aliases: ['kong', 'giant ape', 'giant gorilla', 'gorilla king', 'ape king', 'big ape', 'mega gorilla', 'kingkong', 'monster ape', 'giant monkey', 'huge gorilla'],
     speed: 100, mass: 100, hp: 55, jump: 560, tags: ['ape', 'furry'], weak: ['plane', 'jet', 'helicopter'], special: 'pound',
     hunts: ['plane', 'helicopter', 'jet', 'human', 'hero', 'vehicle', 'monster', 'animal'], eats: ['banana'],
@@ -963,6 +1147,7 @@
     onHurt(e, W) { e.setMood('angry', 1.5); if (Math.random() < 0.3) e.say(pick(['GRRR!', 'RAAH!'])); }
   });
   B('hydra', {
+    drawK: 1.35,
     t: D.hydra(), aliases: ['three headed dragon', '3 headed dragon', 'three headed monster', 'three headed snake', 'hidra', 'hydra dragon', 'many headed dragon', 'the hydra', 'multi headed dragon', 'triple dragon', 'three head dragon'],
     speed: 80, mass: 95, hp: 40, jump: 380, tags: ['dragon', 'reptile', 'scaly'], weak: ['cold', 'ice', 'snow'], special: 'hydra', fireproof: true,
     hunts: ['knight', 'hero', 'human', 'animal', 'monster', 'vehicle'], eats: ['sheep', 'cow', 'pig', 'goat', 'chicken', 'deer'],
@@ -973,6 +1158,7 @@
     onHurt(e, W) { if (Math.random() < 0.4) e.say('HISSS!'); }
   });
   B('lava golem', {
+    drawK: 1.35,
     t: D.lavaGolem(), aliases: ['lava monster', 'magma golem', 'rock monster', 'rock golem', 'golem', 'stone giant', 'lava giant', 'magma monster', 'volcano monster', 'fire golem', 'fire monster', 'molten monster', 'stone golem', 'rock giant', 'lava man', 'magma man', 'fire giant'],
     speed: 45, mass: 130, hp: 50, jump: 220, tags: ['fire', 'hot', 'rock', 'stone'], weak: ['water', 'cold', 'rain', 'snow', 'ice'], special: 'lob', fireproof: true,
     hunts: ['human', 'hero', 'animal', 'monster', 'vehicle', 'snowman', 'tree'], eats: [],
@@ -984,7 +1170,7 @@
   });
   B('giant spider', {
     t: D.spider(), aliases: ['spider boss', 'huge spider', 'big spider', 'spider queen', 'spider king', 'giant tarantula', 'monster spider', 'mega spider', 'shelob', 'aragog', 'spider monster', 'huge tarantula', 'giant spyder', 'enormous spider', 'massive spider', 'giant arachnid', 'giant tarantula spider'],
-    move: 'crawl', speed: 130, mass: 70, hp: 45, jump: 500, tags: ['bug', 'creepy', 'arachnid', 'spider', 'hairy'], weak: ['fire', 'hot', 'boot', 'shoe'], special: 'webshot', venom: true, kin: ['spider'],
+    move: 'crawl', speed: 135, mass: 95, hp: 52, jump: 520, tags: ['bug', 'creepy', 'arachnid', 'spider', 'hairy'], weak: ['fire', 'hot', 'boot', 'shoe'], special: 'webshot', venom: true, kin: ['spider'],
     hunts: ['bug', 'fly', 'bird', 'human', 'hero', 'animal', 'monster'], eats: ['fly', 'mosquito', 'bee', 'butterfly', 'moth', 'ant'],
     say: ['*skitter skitter*', 'Come into my parlour...', '*hisssk*', 'Eight legs, eight eyes, no mercy.'], roar: ['SKREEEE!', '*HISSSK!*', 'WEBBED!'],
     weakSay: ['Not fire! NOT FIRE!', 'SKREEE! Hot!', 'Squish?! Never!', 'Not the shoe!'],
@@ -993,6 +1179,7 @@
     onHurt(e, W) { if (Math.random() < 0.4) e.say('SKREE!'); e.setMood('angry', 1); }
   });
   B('giant moth', {
+    drawK: 1.4,
     t: D.moth(), aliases: ['mothra', 'moth boss', 'huge moth', 'mega moth', 'monster moth', 'moth queen', 'queen moth', 'kaiju moth', 'moth kaiju', 'moth monster', 'enormous moth', 'motra', 'mothera', 'giant butterfly', 'butterfly boss', 'giant moth monster', 'flying boss', 'sky boss'],
     move: 'fly', speed: 170, mass: 60, hp: 45, jump: 300, flyMin: 0.08, flyMax: 0.5, tags: ['bug', 'insect', 'moth', 'winged'], weak: ['fire', 'hot', 'cold', 'ice', 'snow'], special: 'moth', kin: ['moth', 'butterfly'],
     hunts: ['light', 'lamp', 'human', 'hero', 'monster', 'vehicle', 'animal'], eats: ['flower'],
@@ -1003,6 +1190,7 @@
     onHurt(e, W) { W.burst('sparkle', e.x, e.y, 6, 120, { size: 4, life: 0.8, g: 200 }); if (Math.random() < 0.4) e.say('SCREE!'); }
   });
   B('ice golem', {
+    drawK: 1.35,
     t: D.iceGolem(), aliases: ['ice monster', 'frost golem', 'ice giant', 'frost giant', 'ice titan', 'snow golem', 'frost monster', 'ice man', 'iceman', 'ice boss', 'frost boss', 'ice elemental', 'glacier golem', 'ice king', 'frost king', 'crystal golem', 'ice golum', 'ice golam'],
     speed: 50, mass: 120, hp: 50, jump: 240, tags: ['ice', 'cold', 'snow', 'frost', 'golem', 'elemental'], weak: ['hammer', 'pickaxe', 'baseball bat', 'bowling ball'], special: 'frost', fireproof: true, frost: true,
     hunts: ['fire', 'hot', 'dragon', 'human', 'hero', 'monster', 'animal', 'vehicle'], eats: ['ice cream', 'snowball'],
@@ -1013,6 +1201,7 @@
     onHurt(e, W) { W.burst('shard', e.x, e.y, 6, 200, { size: 6, g: 900, life: 0.8 }); if (Math.random() < 0.3) e.say('*crack*'); }
   });
   B('giant snake', {
+    drawK: 1.4,
     t: D.snakeBoss(), aliases: ['king snake', 'huge snake', 'giant cobra', 'big snake', 'snake boss', 'serpent boss', 'giant serpent', 'basilisk', 'monster snake', 'mega snake', 'titanoboa', 'poison snake', 'venom snake', 'giant python', 'giant anaconda', 'nagini', 'kaa', 'snake king', 'cobra king', 'poisonous snake', 'venomous snake'],
     move: 'crawl', speed: 110, mass: 80, hp: 48, jump: 260, tags: ['snake', 'reptile', 'scaly', 'poisonous'], weak: ['cold', 'ice', 'snow', 'eagle', 'hawk', 'mongoose', 'radio', 'guitar', 'piano', 'drum', 'flute', 'music'], special: 'spitvenom', poison: true, kin: ['snake', 'cobra', 'python', 'rattlesnake'],
     hunts: ['mouse', 'rat', 'rabbit', 'bird', 'frog', 'egg', 'human', 'hero', 'animal', 'monster'], eats: ['mouse', 'rat', 'egg', 'frog', 'chick', 'rabbit'],
@@ -1023,6 +1212,7 @@
     onHurt(e, W) { if (Math.random() < 0.4) e.say('HISSS!'); }
   });
   B('giant angry bull', {
+    drawK: 1.3,
     t: D.bullBoss(), aliases: ['angry bull', 'angry giant bull', 'huge angry bull', 'big angry bull', 'enormous angry bull', 'mad bull', 'giant mad bull', 'raging bull', 'giant raging bull', 'bull boss', 'angry bull boss', 'mega bull', 'monster bull', 'bull king', 'king bull', 'el toro', 'toro', 'fighting bull', 'super bull', 'colossal bull', 'titan bull', 'angry bulls'],
     speed: 120, chargeSpeed: 720, mass: 140, hp: 60, jump: 300, tags: ['bull', 'cattle', 'horned', 'furry'], weak: ['cowboy', 'farmer'], special: 'bullcharge', kin: ['bull', 'cow'], roarSfx: 'bellow',
     hunts: ['flag', 'human', 'hero', 'animal', 'vehicle', 'monster'], eats: ['grass', 'hay'],
@@ -1034,7 +1224,7 @@
   });
   B('giant scorpion', {
     t: D.scorpion(), aliases: ['three tailed scorpion', '3 tailed scorpion', 'three tail scorpion', 'triple tailed scorpion', 'triple tail scorpion', 'tri tail scorpion', 'scorpion boss', 'scorpion king', 'huge scorpion', 'mega scorpion', 'big scorpion', 'monster scorpion', 'emperor scorpion', 'giant skorpion', 'giant scorpian', 'scorpian boss', 'three tailed scorpian'],
-    move: 'crawl', speed: 115, mass: 90, hp: 52, jump: 340, tags: ['bug', 'arachnid', 'scorpion', 'creepy', 'armored'], weak: ['boot', 'shoe', 'cold', 'ice', 'snow', 'chicken', 'rooster'], special: 'scorpion', poison: true, kin: ['scorpion'], roarSfx: 'screech',
+    move: 'crawl', speed: 120, mass: 125, hp: 60, jump: 360, tags: ['bug', 'arachnid', 'scorpion', 'creepy', 'armored'], weak: ['boot', 'shoe', 'cold', 'ice', 'snow', 'chicken', 'rooster'], special: 'scorpion', noBonk: true, poison: true, kin: ['scorpion'], roarSfx: 'screech',
     hunts: ['bug', 'spider', 'human', 'hero', 'animal', 'monster', 'vehicle'], eats: ['bug', 'fly', 'beetle', 'ant', 'grasshopper', 'spider', 'mouse'],
     say: ['*clack clack*', 'Three tails, no waiting.', '*skitter*', 'Pinch, pinch, sting.'], roar: ['SKREEEEK!', '*CLACK CLACK*', '*TRIPLE STING*'],
     weakSay: ['Not the boot!', 'Chickens?! RUN!', 'Too c-c-cold!'],
@@ -1043,8 +1233,9 @@
     onHurt(e, W) { if (Math.random() < 0.35) e.say('SKREEK!'); }
   });
   B('wasp swarm', {
+    drawK: 1.5,
     t: D.waspQueen(), aliases: ['wasps', 'swarm', 'swarm of wasps', 'wasp nest', 'wasp queen', 'queen wasp', 'angry wasps', 'killer wasps', 'giant wasp', 'wasp boss', 'hornets', 'hornet swarm', 'murder hornets', 'murder hornet', 'killer bees', 'bee swarm', 'swarm of bees', 'angry bees', 'killer bee swarm', 'bees', 'wasp army', 'hive'],
-    move: 'fly', speed: 150, mass: 40, hp: 40, jump: 300, flyMin: 0.12, flyMax: 0.5, tags: ['bug', 'insect', 'wasp', 'winged', 'swarm'], weak: ['fire', 'hot', 'water', 'rain', 'smoke', 'cold', 'ice', 'snow'], special: 'swarm', kin: ['bee', 'wasp', 'hornet'], roarSfx: 'buzz',
+    move: 'fly', speed: 150, mass: 40, hp: 40, swarmCap: 90, jump: 300, flyMin: 0.12, flyMax: 0.5, tags: ['bug', 'insect', 'wasp', 'winged', 'swarm'], weak: ['fire', 'hot', 'water', 'rain', 'smoke', 'cold', 'ice', 'snow'], special: 'swarm', kin: ['bee', 'wasp', 'hornet'], roarSfx: 'buzz',
     hunts: ['human', 'hero', 'animal', 'monster', 'flower', 'honey'], eats: ['honey', 'flower'],
     say: ['*bzzzzzzz*', 'BZZZ! Get them, girls!', '*angry buzzing*', 'You disturbed the nest!'], roar: ['BZZZZZZZ!', 'SWARM!', 'STING THEM!'],
     weakSay: ['Not fire! BZZT!', 'My wings are wet!', 'SMOKE! Scatter!', 'Too c-c-cold to fly!'],
@@ -1053,8 +1244,9 @@
     onHurt(e, W) { if (Math.random() < 0.3) e.say('BZZT!'); }
   });
   B('beetle swarm', {
+    drawK: 1.5,
     t: D.beetleKing(), aliases: ['beetles', 'swarm of beetles', 'beetle army', 'beetle king', 'king beetle', 'giant beetle', 'beetle boss', 'bug swarm', 'swarm of bugs', 'bugs', 'cockroaches', 'roaches', 'cockroach swarm', 'scarabs', 'scarab swarm', 'rhino beetle', 'rhinoceros beetle', 'stag beetles', 'beatles', 'beetle swarm boss', 'creepy crawlies', 'insects'],
-    move: 'crawl', speed: 90, mass: 60, hp: 44, jump: 300, tags: ['bug', 'insect', 'beetle', 'swarm', 'armored'], weak: ['boot', 'shoe', 'chicken', 'rooster', 'water', 'rain', 'fire', 'hot'], special: 'swarm', swarmKind: 'beetle', kin: ['beetle', 'bug', 'ant', 'ladybug', 'scarab', 'cockroach'], roarSfx: 'skitter',
+    move: 'crawl', speed: 90, mass: 60, hp: 44, swarmCap: 110, jump: 300, tags: ['bug', 'insect', 'beetle', 'swarm', 'armored'], weak: ['boot', 'shoe', 'chicken', 'rooster', 'water', 'rain', 'fire', 'hot'], special: 'swarm', swarmKind: 'beetle', kin: ['beetle', 'ladybug', 'scarab', 'cockroach'], roarSfx: 'skitter',
     hunts: ['human', 'hero', 'animal', 'monster', 'food', 'poop'], eats: ['food', 'poop', 'leaf'],
     say: ['*click click click*', 'Crawl, my beetles!', '*skitter skitter*', 'Our shells are unbreakable!'], roar: ['CHARGE, BEETLES!', '*CLICK CLICK*', 'SWARM THEM!'],
     weakSay: ['Not the boot! NOT THE BOOT!', 'A chicken?! Scatter!', 'We can\'t swim!', 'Our shells are melting!'],
@@ -1062,13 +1254,24 @@
     hint: 'The beetle swarm crawls all over everything! Bring chickens, or stomp them.',
     onHurt(e, W) { if (Math.random() < 0.3) e.say('*CLICK!*'); }
   });
-  SB.BOSSES = ['kraken', 'mega robot', 'king kong', 'hydra', 'lava golem', 'giant spider', 'giant moth', 'ice golem', 'giant snake', 'giant angry bull', 'giant scorpion', 'wasp swarm', 'beetle swarm'];
+  B('giant praying mantis', {
+    drawK: 1.35,
+    t: D.mantis(), aliases: ['praying mantis', 'mantis', 'prayingmantis', 'prayingmantes', 'praying mantes', 'praying mantas', 'preying mantis', 'praying mantus', 'praing mantis', 'mantid', 'giant mantis', 'mantis boss', 'mantis queen', 'mantis king', 'giant praying mantes', 'orchid mantis', 'mantises', 'big mantis', 'huge mantis'],
+    speed: 105, mass: 70, hp: 46, jump: 600, tags: ['bug', 'insect', 'mantis'], weak: ['eagle', 'hawk', 'crow', 'owl', 'chicken', 'rooster', 'cold', 'ice', 'snow'], special: 'mantis', noBonk: true, kin: ['mantis'], roarSfx: 'screech',
+    hunts: ['bug', 'human', 'hero', 'animal', 'monster'], eats: ['fly', 'mosquito', 'bee', 'moth', 'butterfly', 'grasshopper', 'beetle', 'ant', 'ladybug', 'mouse', 'frog', 'lizard', 'hummingbird'],
+    say: ['*sways like a leaf*', '...', '*watches you*', 'Patience. Patience.'], roar: ['SKREEEE!', '*SNATCH*', 'GOTCHA!'],
+    weakSay: ['A bird?! Not a bird!', 'Too c-c-cold!', 'SKREE! Get away, bird!'],
+    power: 'An ambush hunter: it holds still and fades into camouflage until something comes close, then its spiked forelegs strike faster than you can see. It grabs a victim and bites it over and over, eats small bugs and mice in one bite, slashes big enemies, and leaps across the screen on its wings.', weakText: 'birds (eagles, owls, crows and chickens eat mantises) and cold',
+    hint: 'The praying mantis hides in plain sight, then strikes! Weak to birds and cold.',
+    onHurt(e, W) { if (Math.random() < 0.35) e.say('SKREE!'); }
+  });
+  SB.BOSSES = ['kraken', 'mega robot', 'king kong', 'hydra', 'lava golem', 'giant spider', 'giant moth', 'ice golem', 'giant snake', 'giant angry bull', 'giant scorpion', 'wasp swarm', 'beetle swarm', 'giant praying mantis'];
   SB.WORDS.boss = SB.WORDS.bosses = 'kraken'; // typing "boss" summons a random one (see SB.findWord)
 
   // ---------- boss attacks (run every frame by the game loop via SB.SPECIALS) ----------
   const S = SB.SPECIALS = SB.SPECIALS || {};
   const ready = e => !(e.ko || e.held || e.dizzy > 0 || e.sleeping || e.spawnT < 1 || e.frozenT > 0 || e.webT > 0);
-  const foe = (e, o) => o !== e && o.alive && !o.dying && !o.static && !o.held && o.def.name !== e.def.name;
+  const foe = (e, o) => o !== e && o.alive && !o.dying && !o.static && !o.held && !o.invisible && o.def.name !== e.def.name;
 
   // kraken: grab the nearest thing and fling it
   S.tentacles = function (e, dt, W) {
@@ -1090,7 +1293,7 @@
     e.specT -= dt; if (e.laserT > 0) e.laserT -= dt;
     if (e.charge > 0) {
       e.charge -= dt;
-      if (Math.random() < dt * 25) W.particle('spark', e.x + e.facing * 22 * e.scale, e.y - 82 * e.scale, { vx: (Math.random() - 0.5) * 80, vy: (Math.random() - 0.5) * 80, life: 0.2, size: 5 });
+      if (Math.random() < dt * 25) W.particle('spark', e.x + e.facing * 22 * ks(e), e.y - 82 * ks(e), { vx: (Math.random() - 0.5) * 80, vy: (Math.random() - 0.5) * 80, life: 0.2, size: 5 });
       if (e.charge <= 0) fireLaser(e, W);
       return;
     }
@@ -1123,7 +1326,7 @@
     return hits;
   }
   function fireLaser(e, W) {
-    const ex = e.x + e.facing * 24 * e.scale, ey = e.y - 84 * e.scale;
+    const ex = e.x + e.facing * 24 * ks(e), ey = e.y - 84 * ks(e);
     const tg = e.aim; let ax = e.facing, ay = 0;
     if (tg && tg.alive) { const dx = tg.x - ex, dy = tg.y - ey, d = Math.hypot(dx, dy) || 1; if (dx * e.facing > 0) { ax = dx / d; ay = dy / d; } }
     e.laserT = 0.35; e.aim = null; W.sfx('laser', e.x);
@@ -1161,7 +1364,7 @@
     }
     if (e.specT <= 0 && d < 660 * e.scale && d > 70) {
       e.facing = dx >= 0 ? 1 : -1;
-      const ex = e.x + e.facing * 60 * e.scale, ey = e.y;
+      const ex = e.x + e.facing * 60 * ks(e), ey = e.y;
       const ax = dx / d, ay = dy / d;
       e.laserT = 0.35; e.specT = 4;
       const hits = beam(e, W, ex, ey, ax, ay, 700 * e.scale, 3, false); W.sfx('laser', e.x, 0.8);
@@ -1209,7 +1412,7 @@
       e.breath -= dt;
       for (let i = 0; i < 3; i++) {
         const M = D.hydraMouths[i];
-        const mx = e.x + e.facing * M[0] * e.scale, my = e.y + M[1] * e.scale;
+        const mx = e.x + e.facing * M[0] * ks(e), my = e.y + M[1] * ks(e);
         const dx = Math.cos(M[2]) * e.facing, dy = Math.sin(M[2]);
         for (let k = 0; k < 2; k++) { const sp = 280 + Math.random() * 220; W.particle('flame', mx, my, { vx: dx * sp + (Math.random() - 0.5) * 60, vy: dy * sp + (Math.random() - 0.5) * 60, life: 0.35 + Math.random() * 0.2, size: 8 + Math.random() * 10 * e.scale }); }
         const R = 230 * e.scale;
@@ -1245,7 +1448,7 @@
       const dx = tg.x - e.x, dy = tg.y - e.y, d = Math.hypot(dx, dy);
       if (d > 60 && d < 420 * e.scale) {
         e.facing = dx >= 0 ? 1 : -1; e.spitT = 0.45; e.specT = 3.5; W.sfx('web', e.x); e.aim = tg; e.say(pick(['*THWIP*', 'Stay still...', '*ptoo!*']));
-        const mx = e.x + e.facing * 44 * e.scale, my = e.y + 6 * e.scale;
+        const mx = e.x + e.facing * D.spiderMouth[0] * e.scale, my = e.y + D.spiderMouth[1] * e.scale;
         const w = W.spawn('web', mx, my, { scale: Math.max(0.7, e.scale), quiet: true }); if (!w) return;
         w.owner = e; w.y = my;
         const T = Math.max(0.25, d / 800), g = 1700 * w.gravity;
@@ -1262,7 +1465,7 @@
     if (Math.random() < dt * 4) W.particle('sparkle', e.x + (Math.random() - 0.5) * e.w * 0.8, e.y + (Math.random() - 0.5) * e.h * 0.8, { vy: 25, life: 0.8, size: 4 });
     if (e.breath > 0) {
       e.breath -= dt;
-      const mx = e.x + e.facing * 30 * e.scale, my = e.y - 78 * e.scale, dx = e.facing, dy = 0.18, R = 430 * e.scale;
+      const mx = e.x + e.facing * 30 * ks(e), my = e.y - 78 * ks(e), dx = e.facing, dy = 0.18, R = 430 * e.scale;
       for (let k = 0; k < 3; k++) { const sp = 320 + Math.random() * 260; W.particle('puff', mx, my, { vx: dx * sp + (Math.random() - 0.5) * 80, vy: dy * sp + (Math.random() - 0.5) * 140, life: 0.45 + Math.random() * 0.3, size: 5 + Math.random() * 8 }); }
       if (Math.random() < dt * 40) W.particle('sparkle', mx + dx * Math.random() * R * 0.8, my + (Math.random() - 0.3) * 120, { vx: dx * 200, vy: 60, life: 0.6, size: 4 });
       for (const o of W.entities) {
@@ -1288,7 +1491,7 @@
   };
   function volley(e, W) {
     const tg = e.aim; e.aim = null;
-    const hx = e.x + e.facing * 46 * e.scale, hy = e.y - 70 * e.scale;
+    const hx = e.x + e.facing * 46 * ks(e), hy = e.y - 70 * ks(e);
     // lead the target a little so a moving (or falling) target still gets hit
     const ax = tg && tg.alive ? tg.x + tg.vx * 0.45 : e.x + e.facing * 400;
     const ay = tg && tg.alive ? Math.min(W.groundY - tg.h / 2, tg.y + tg.vy * 0.45) : W.groundY - 20;
@@ -1304,7 +1507,7 @@
   // giant snake: venom spit at range, poison breath up close
   S.spitvenom = function (e, dt, W) {
     e.specT -= dt; e.galeT -= dt; if (e.spitT > 0) e.spitT -= dt;
-    const mx = e.x + e.facing * D.snakeMouth[0] * e.scale, my = e.y + D.snakeMouth[1] * e.scale;
+    const mx = e.x + e.facing * D.snakeMouth[0] * ks(e), my = e.y + D.snakeMouth[1] * ks(e);
     if (e.breath > 0) {
       e.breath -= dt;
       const R = 240 * e.scale;
@@ -1324,7 +1527,7 @@
     if (e.galeT <= 0 && Math.abs(dx) < 260 * e.scale && tg.y > e.y - 200 * e.scale) { e.galeT = 10; e.breath = 2; W.sfx('hiss', e.x); e.facing = dx >= 0 ? 1 : -1; e.say('*HISSSSSS*'); return; }
     if (e.specT <= 0 && d > 90 && d < 650 * e.scale && tg.creature && !(tg.poisonT > 0)) {
       e.facing = dx >= 0 ? 1 : -1; e.spitT = 0.45; e.specT = 4; W.sfx('spit', e.x);
-      const sx = e.x + e.facing * D.snakeMouth[0] * e.scale, sy = my;
+      const sx = e.x + e.facing * D.snakeMouth[0] * ks(e), sy = my;
       const v = W.spawn('venom', sx, sy, { scale: Math.max(0.8, e.scale), quiet: true }); if (!v) return;
       v.owner = e; v.y = sy;
       const ax = tg.x + tg.vx * 0.4, ay = Math.min(W.groundY - tg.h / 2, tg.y + tg.vy * 0.4);
@@ -1338,7 +1541,7 @@
   // giant angry bull: paw and snort, then a screen-crossing charge; rears up and stomps up close
   S.bullcharge = function (e, dt, W) {
     e.specT -= dt; e.galeT -= dt;
-    const nx = e.x + e.facing * D.bullNose[0] * e.scale, ny = e.y + D.bullNose[1] * e.scale;
+    const nx = e.x + e.facing * D.bullNose[0] * ks(e), ny = e.y + D.bullNose[1] * ks(e);
     if ((e.pawT > 0 || e.chargeT > 0 || e.mood === 'angry') && Math.random() < dt * (e.pawT > 0 ? 14 : 3)) W.particle('smoke', nx, ny, { vx: e.facing * (40 + Math.random() * 60), vy: -20 - Math.random() * 30, life: 0.7, size: 5 + Math.random() * 4, col: '#ffffff' });
     if (e.rearT > 0) {
       const was = e.rearT; e.rearT -= dt;
@@ -1451,7 +1654,7 @@
   }
 
   // ---------- wasp swarm: every wasp flies on its own, the swarm hunts as a group ----------
-  const waspMax = e => Math.min(48, e.hpMax);
+  const waspMax = e => Math.min(e.def.swarmCap || 48, e.hpMax);
   function newWasp(e, x, y) {
     const a = Math.random() * TAU, beetle = e.def.swarmKind === 'beetle';
     return { x: x == null ? e.x + Math.cos(a) * (beetle ? 70 : 40) : x, y: y == null ? (beetle ? SB.world.groundY - 5 : e.y + Math.sin(a) * 30) : y, vx: (Math.random() - 0.5) * 200, vy: beetle ? 0 : (Math.random() - 0.5) * 200,
@@ -1468,22 +1671,37 @@
     }
   }
   S.swarm = function (e, dt, W) {
-    const s = e.scale, ws = e.wasps || (e.wasps = []);
+    const s = ks(e), ws = e.wasps || (e.wasps = []);
     if (!e.stingAcc) e.stingAcc = new Map();
     const live = ws.filter(w => !w.dead);
     // keep the number of wasps in step with the swarm's health (the queen hatches more as it heals)
     const want = e.ko ? 0 : Math.ceil(waspMax(e) * Math.max(0, e.hp) / e.hpMax);
     if (live.length > want + 1) for (let k = live.length - 1; k >= 0 && live.length > want; k--) { killWasp(e, live[k], W, false); live.pop(); }
-    else if (live.length < want - 1) for (let k = live.length; k < want; k++) { const w = newWasp(e); ws.push(w); live.push(w); }
+    else if (live.length < want) for (let k = live.length; k < want; k++) {
+      // a new one hatches from the queen / king
+      const beetle = e.def.swarmKind === 'beetle';
+      const hx = e.x - e.facing * (beetle ? 30 : 36) * ks(e), hy = beetle ? W.groundY - 5 : e.y + 12 * ks(e);
+      const w = newWasp(e, hx, hy); ws.push(w); live.push(w);
+      if (!e.held && e.spawnT >= 1) W.burst('sparkle', hx, hy, 3, 60, { size: 4, life: 0.5 });
+    }
+    // the swarm never stops breeding: heal first, then keep growing past its starting size up to its cap
     e.regenT -= dt;
-    if (e.regenT <= 0) { e.regenT = 4; if (!e.ko && e.hp < e.hpMax) { e.hp++; e.lastHp = e.hp; } }
+    if (e.regenT <= 0) {
+      e.regenT = 1.5;
+      if (!e.ko && !e.held) {
+        if (e.hp < e.hpMax) e.hp++;
+        else if (e.hpMax < (e.def.swarmCap || 48)) { e.hpMax++; e.hp++; }
+        e.lastHp = e.hp; e.hpShown = Math.max(e.hpShown || 0, e.hp - 1);
+        if (Math.random() < 0.08) e.say(e.def.swarmKind === 'beetle' ? pick(['More beetles!', '*click* Hatch, my children!', 'The swarm grows!']) : pick(['More wasps! Bzzz!', 'Hatch, my children!', 'The swarm grows!']));
+      }
+    }
     // choose up to three victims and split the swarm between them
     e.specT -= dt;
     if (e.specT <= 0) {
       e.specT = 0.5;
       let foes = [];
       if (ready(e)) {
-        if (SB.battle) foes = W.entities.filter(o => o !== e && o.alive && !o.dying && o.creature && !o.ko && !o.held && !SB.kin(e, o) && Math.hypot(o.x - e.x, o.y - e.y) < 560 * s)
+        if (SB.battle) foes = W.entities.filter(o => o !== e && o.alive && !o.dying && o.creature && !o.ko && !o.held && !o.invisible && !SB.kin(e, o) && Math.hypot(o.x - e.x, o.y - e.y) < 560 * s)
           .sort((a, b) => Math.hypot(a.x - e.x, a.y - e.y) - Math.hypot(b.x - e.x, b.y - e.y)).slice(0, 3);
         else if (e.target && e.target.creature && e.target.alive && !e.target.ko && Math.hypot(e.target.x - e.x, e.target.y - e.y) < 560 * s) foes = [e.target];
       }
@@ -1512,7 +1730,7 @@
     const hits = new Map();
     for (const w of ws) {
       if (w.dead) { w.vy += 900 * dt; w.vx *= 0.97; w.x += w.vx * dt; w.y = Math.min(W.groundY - 3, w.y + w.vy * dt); w.life -= dt; continue; }
-      const T = w.tgt && w.tgt.alive && !w.tgt.dying && !w.tgt.ko ? w.tgt : null;
+      const T = w.tgt && w.tgt.alive && !w.tgt.dying && !w.tgt.ko && !w.tgt.invisible ? w.tgt : null;
       if (!T) w.tgt = null;
       w.ph += dt * (2.2 + w.sp);
       let gx, gy, max, ny = 900;
@@ -1585,13 +1803,101 @@
     for (const e of W.entities) if (e.wasps && e.alive && !e.ko) for (const w of e.wasps) if (!w.dead && Math.hypot(w.x - x, w.y - y) < r) { killWasp(e, w, W, true); w.vx = (w.x - x) * 4; w.vy = (w.y - y) * 4 - 200; }
   };
   // the swarm is drawn over the world (wasps fly far from the queen)
-  SB.DEFS['beetle swarm'].drawWorld = function (p, ctx, e, t) { if (!e.wasps) return; ctx.strokeStyle = '#000'; for (const w of e.wasps) { D.miniBeetle(p, w.x, w.y - 2, Math.max(1.45, e.scale * 1.45), w.vx >= 0 ? 1 : -1, t, w.seed, w.dead ? Math.max(0, w.life / 1.2) : 1, w.fly, w.col); if (w.cracked && !w.dead) { ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; p.line(w.x - 3, w.y - 4, w.x + 1, w.y - 1); ctx.restore(); } } };
+  SB.DEFS['beetle swarm'].drawWorld = function (p, ctx, e, t) { if (!e.wasps) return; ctx.strokeStyle = '#000'; for (const w of e.wasps) { D.miniBeetle(p, w.x, w.y - 3, Math.max(1.75, e.scale * 1.75), w.vx >= 0 ? 1 : -1, t, w.seed, w.dead ? Math.max(0, w.life / 1.2) : 1, w.fly, w.col); if (w.cracked && !w.dead) { ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; p.line(w.x - 3, w.y - 4, w.x + 1, w.y - 1); ctx.restore(); } } };
   // ground stomps crush beetles
-  SB.swarmCrush = function (x, y, r) {
+  SB.swarmCrush = function (x, y, r, src) {
     const W = SB.world;
-    for (const e of W.entities) if (e.wasps && e.alive && !e.ko && e.def.swarmKind === 'beetle') for (const w of e.wasps) if (!w.dead && !w.fly && Math.abs(w.x - x) < r && w.y > W.groundY - 40) { if (Math.random() < 0.5) { killWasp(e, w, W, true); w.vy = -120; } else { w.vy = -320; w.vx = (w.x - x) * 3; } }
+    for (const e of W.entities) if (e.wasps && e.alive && !e.ko && e.def.swarmKind === 'beetle' && e !== src) for (const w of e.wasps) if (!w.dead && !w.fly && Math.abs(w.x - x) < r && w.y > W.groundY - 40) { if (Math.random() < 0.5) { killWasp(e, w, W, true); w.vy = -120; } else { w.vy = -320; w.vx = (w.x - x) * 3; } }
   };
-  SB.DEFS['wasp swarm'].drawWorld = function (p, ctx, e, t) { if (!e.wasps) return; ctx.strokeStyle = '#000'; for (const w of e.wasps) D.wasp(p, w.x, w.y, Math.max(1, e.scale), w.vx >= 0 ? 1 : -1, t, w.seed, w.dead ? Math.max(0, w.life / 1.2) : 1); };
+  SB.DEFS['wasp swarm'].drawWorld = function (p, ctx, e, t) { if (!e.wasps) return; ctx.strokeStyle = '#000'; for (const w of e.wasps) D.wasp(p, w.x, w.y, Math.max(1.3, e.scale * 1.3), w.vx >= 0 ? 1 : -1, t, w.seed, w.dead ? Math.max(0, w.life / 1.2) : 1); };
+
+  // giant praying mantis: camouflage ambush, lightning grab, slashes, leaps
+  S.mantis = function (e, dt, W) {
+    const s = e.scale;
+    e.specT -= dt; e.leapCd -= dt; if (e.ambushT > 0) e.ambushT -= dt; if (e.leapT > 0) e.leapT -= dt;
+    // camouflage: fades in while it keeps still and calm, drops the instant it moves, attacks or gets hurt
+    const hurtNow = e.hp < (e.prevHp == null ? e.hp : e.prevHp); e.prevHp = e.hp;
+    if (hurtNow || e.strikeT > 0 || e.slashT > 0 || e.grabbed || Math.abs(e.vx) > 30 || !e.grounded || e.held) e.calmT = 0; else e.calmT += dt;
+    const want = e.calmT > 1.2 && !e.ko ? 0.85 : 0;
+    e.camo += (want - e.camo) * Math.min(1, dt * (want > e.camo ? 1.2 : 8));
+    if (e.camo > 0.6 && !e.camoSaid) { e.camoSaid = true; e.say('*blends in*'); }
+    if (e.camo < 0.2) e.camoSaid = false;
+    if (e.strikeT > 0) { const was = e.strikeT; e.strikeT -= dt; if (was > 0.15 && e.strikeT <= 0.15) mantisStrike(e, W); }
+    if (e.slashT > 0) { const was = e.slashT; e.slashT -= dt; if (was > 0.18 && e.slashT <= 0.18) mantisSlash(e, W); }
+    // holding a victim: pin it in the forelegs and bite
+    if (e.grabbed) {
+      const v = e.grabbed;
+      if (!v.alive || v.dying || v.held || v.ko || e.ko || e.held || e.dizzy > 0 || e.frozenT > 0) { mantisRelease(e, W, false); return; }
+      e.grabT -= dt; e.grabTick -= dt;
+      v.x = e.x + e.facing * D.mantisClaw[0] * ks(e); v.y = Math.min(e.y + D.mantisClaw[1] * ks(e), W.groundY - v.h / 2);
+      v.vx = 0; v.vy = 0; v.grounded = false; v.angle = e.facing * 0.5;
+      if (e.grabTick <= 0) { e.grabTick = 0.45; W.hurt(v, 2, e, { quiet: true }); W.sfx('snip', v.x, 0.8); if (Math.random() < 0.5) v.say(pick(['HELP!', 'Let me go!', 'AAAH!', 'It\'s got me!'])); }
+      if (v.ko || e.grabT <= 0) mantisRelease(e, W, true);
+      return;
+    }
+    if (!ready(e) || !e.grounded) return;
+    const tg = e.target;
+    if (!(tg && tg.alive && !tg.dying && !tg.ko)) { if (e.ambushT <= 0 && Math.random() < dt * 0.3) e.ambushT = 3; return; }
+    const dx = tg.x - e.x, ad = Math.abs(dx), reach = e.w * 0.5 + 45 * s + tg.w * 0.5;   // measured from the front of the body
+    const level = tg.bottom > e.top + e.h * 0.1 && tg.top < e.bottom;
+    if (ad < reach + 40 * s && level && e.specT > 0) { e.ambushT = Math.max(e.ambushT, 0.2); e.facing = dx >= 0 ? 1 : -1; }   // in range: hold still and wait to strike, don't blunder into it
+    if (e.specT <= 0 && ad < reach && level) {
+      e.facing = dx >= 0 ? 1 : -1; e.camo = 0; e.calmT = 0; e.ambushT = 0;
+      if (!tg.def.boss && !tg.static && tg.mass < 40) { e.strikeT = 0.3; e.specT = 3; }
+      else { e.slashT = 0.35; e.specT = 1.4; }
+      W.sfx('swing', e.x);
+      return;
+    }
+    if (e.leapCd <= 0 && ad > 260 * s && ad < 700 * s && Math.abs(tg.y - e.y) < 260 * s) {
+      e.facing = dx >= 0 ? 1 : -1; e.leapCd = 5; e.leapT = 0.9; e.specT = 0; e.camo = 0; e.ambushT = 0;
+      const T = 2 * 620 / 1700;
+      e.vx = e.facing * clamp((ad - reach * 0.7) / T, 250, 950); e.vy = -620; e.grounded = false;
+      e.say(pick(['*LEAP*', 'SKREEE!'])); W.sfx('whoosh', e.x); W.sfx('wind', e.x, 0.4);
+      return;
+    }
+    // prey nearby but out of reach: freeze and wait for it to wander closer
+    if (ad < 450 * s && e.ambushT <= 0 && Math.random() < dt * 0.5) e.ambushT = 2.5;
+  };
+  function mantisStrike(e, W) {
+    const s = e.scale, reach = e.w * 0.5 + 55 * s;
+    let best = null, bd = Infinity;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || !o.creature || o.ko || o.held || o.static || o.invisible || SB.kin(e, o)) continue;
+      const dx = (o.x - e.x) * e.facing;
+      if (dx < 0 || dx > reach + o.w * 0.5 || o.bottom < e.top || o.top > e.bottom) continue;
+      if (dx < bd) { bd = dx; best = o; }
+    }
+    if (!best) { W.sfx('swing', e.x, 0.5); return; }
+    W.particle('slash', (e.x + best.x) / 2, best.y, { life: 0.2, size: 50, rot: e.facing, col: '#c8f08a' });
+    if (best.mass < 1.5 || SB.matches(best, e.eats)) {                          // small prey: one bite
+      W.remove(best, 'eaten'); e.say(pick(['*CRUNCH*', 'Delicious.', '*munch munch*'])); e.hp = Math.min(e.hpMax, e.hp + 4); e.prevHp = e.hp;
+      W.sfx('snip', best.x); W.popText(best.x, best.top - 10, 'CHOMP!', 22); return;
+    }
+    if (best.def.boss || best.mass >= 40) { mantisSlash(e, W); return; }
+    e.grabbed = best; e.grabT = 1.4; e.grabTick = 0.2;
+    W.hurt(best, 2, e, { quiet: true }); best.dizzy = Math.max(best.dizzy, 0.6);
+    best.say(pick(['WHOA!', 'HEY!', 'AAAH!'])); e.say(pick(['GOTCHA!', '*SNATCH*']));
+    W.popText(best.x, best.top - 14, 'SNATCH!', 24); W.sfx('snip', best.x); W.shake(4);
+  }
+  function mantisRelease(e, W, toss) {
+    const v = e.grabbed; e.grabbed = null; e.grabT = 0;
+    if (!v || !v.alive) return;
+    v.angle = 0;
+    if (toss) { v.vx = e.facing * (420 + Math.random() * 160); v.vy = -460; v.angVel = e.facing * 10; v.grounded = false; W.sfx('whoosh', v.x); e.say(pick(['Next!', '*tosses it away*', 'Hmph.'])); }
+  }
+  function mantisSlash(e, W) {
+    const s = e.scale, reach = e.w * 0.5 + 60 * s; let hits = 0;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || !o.creature || o.ko || o.held || SB.kin(e, o)) continue;
+      const dx = (o.x - e.x) * e.facing;
+      if (dx < e.w * 0.1 || dx > reach + o.w * 0.5 || o.bottom < e.top - 30 || o.top > e.bottom) continue;
+      W.hurt(o, o.def.boss ? 4 : 3, e, { quiet: true });
+      if (!o.def.boss) { o.vx = e.facing * 380; o.vy = -300; o.grounded = false; }
+      hits++;
+    }
+    W.particle('slash', e.x + e.facing * e.w * 0.45, e.y - e.h * 0.25, { life: 0.25, size: 70, rot: e.facing, col: '#c8f08a' });
+    W.sfx(hits ? 'heavy' : 'swing', e.x + e.facing * e.w * 0.4);
+  }
 
   // lava golem: lob a fireball at the target
   S.lob = function (e, dt, W) {
@@ -1609,7 +1915,7 @@
   };
   function throwFireball(e, W) {
     const tg = e.aim; e.aim = null;
-    const hx = e.x + e.facing * 46 * e.scale, hy = e.y - 60 * e.scale;
+    const hx = e.x + e.facing * 46 * ks(e), hy = e.y - 60 * ks(e);
     const f = W.spawn('fireball', hx, hy, { scale: Math.max(0.6, e.scale), quiet: true }); if (!f) return;
     f.owner = e; f.y = hy;
     const ax = tg && tg.alive ? tg.x + tg.vx * 0.5 : e.x + e.facing * 300, ay = tg && tg.alive ? Math.min(W.groundY - tg.h / 2, tg.y + tg.vy * 0.5) : W.groundY;

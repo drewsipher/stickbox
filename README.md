@@ -1,6 +1,6 @@
 # Stickbox
 
-A Scribblenauts-style sandbox drawn in hand-drawn, full-colour stick figures.
+A Scribblenauts-style sandbox drawn as realistic painted illustrations: smooth shapes lit like solid forms, soft shadows, natural proportions and a painted landscape.
 Type a word, it appears. Drag it, throw it, poke it, or drop it in the trash.
 
 ## Run it
@@ -13,6 +13,8 @@ No build step and no dependencies. Either:
 ## Play
 
 * **Type** a word and press Enter (or click *Create!*). Autocomplete chips appear as you type; Tab accepts the first one.
+* **Control** any creature, person, animal or boss: click **Control** then click it (or double-click it). Arrows or WASD move, Up or Space jumps (fliers fly up and down), **F** attacks whatever is in front, **E** uses its own special attack (the bull's charge, the mantis's snatch, the robot's laser, a dragon's fire breath...) or a pounce for creatures without one, and Esc lets go. A "YOU" marker follows it, and touch buttons appear on phones and tablets.
+* **Invisible** things (`invisible knight`, `invisible dragon`) really are unseen: no creature or boss can target them, run from them or aim attacks at them, and something they hit can't fight back ("Who did that?!"). Explosions, stomps and fire still hit them.
 * **Adjectives** work: `giant dog`, `tiny flying pig`, `angry robot`, `sleepy cat`, `fast zombie horse`, `bouncy invisible ball`.
 * **Drag** anything with the mouse or a finger. Let go while moving to **throw** it.
 * **Click** something to poke it (creatures talk and hop; bombs, rockets, cannons, presents, chests, potions, cameras and graves do their thing).
@@ -44,7 +46,7 @@ things with it if you're feeling mean.
 
 ## Bosses
 
-The **Bosses** button opens a panel with thirteen giant, powerful monsters. Click one to summon it (or just type its
+The **Bosses** button opens a panel with fourteen giant, powerful monsters. Click one to summon it (or just type its
 name). Bosses have lots of health (a big bar with their name floats over them), shake the ground when they walk or
 land, hit much harder than ordinary creatures, and each has a signature attack:
 
@@ -61,8 +63,9 @@ land, hit much harder than ordinary creatures, and each has a signature attack:
 | **giant snake** (giant cobra, basilisk) | spits venom at long range, breathes a poison cloud up close, and every bite poisons: poisoned creatures turn green, slow down and lose health until it wears off (doctors, ambulances and water cure it) | cold, eagles, and music (snake charmers) |
 | **giant angry bull** (angry bull, raging bull, bull boss) | paws the ground and snorts steam, then charges across the screen tossing everything in its path; rears up and stomps anything close | charging into trees, houses and walls (it knocks itself silly), and cowboys |
 | **giant scorpion** (three tailed scorpion, scorpion king) | pincer snap that flings enemies over its back, a triple sting from its three tails, and poison stingers at long range; every sting poisons | a stomp with a boot or shoe, cold, and chickens |
-| **wasp swarm** (wasps, swarm, killer bees, hornets) | a crowned queen leads a swarm of individually flying wasps that splits up to mob up to three enemies, stinging over and over; the queen hatches new wasps | fire, smoke, water and rain (wasps die flying into them), cold, fans, explosions, and **clicking on wasps swats them** |
-| **beetle swarm** (beetles, bugs, cockroaches, beetle king) | a king rhinoceros beetle leads a carpet of armored beetles that crawl across the ground, climb up their victims and bite, mob up to three enemies, and fly after anything in the air | stomps (boots, shoes, ground-pounds), chickens, birds and frogs (they eat beetles), water, rain and fire; a click cracks a beetle's shell, a second click squashes it |
+| **wasp swarm** (wasps, swarm, killer bees, hornets) | a crowned queen leads a swarm of individually flying wasps that splits up to mob up to three enemies, stinging over and over; the queen keeps hatching new wasps, growing the swarm up to 90 | fire, smoke, water and rain (wasps die flying into them), cold, fans, explosions, and **clicking on wasps swats them** |
+| **beetle swarm** (beetles, bugs, cockroaches, beetle king) | a king rhinoceros beetle leads a carpet of armored beetles that crawl across the ground, climb up their victims and bite, mob up to three enemies, and fly after anything in the air; the king keeps hatching more, up to 110 | stomps (boots, shoes, ground-pounds), chickens, birds and frogs (they eat beetles), water, rain and fire; a click cracks a beetle's shell, a second click squashes it |
+| **giant praying mantis** (praying mantis, mantis) | an ambush hunter: holds still and fades into camouflage (enemies don't notice it until they're close), strikes with spiked forelegs to grab a victim and bite it repeatedly, eats small bugs and mice in one bite, slashes big enemies, and leaps across the screen | birds (eagles, owls, crows, chickens) and cold |
 
 Typing `boss` (or `bosses`) summons a random one. A boss that gets knocked out poops itself: a stinky pile flies out behind it with a big PLOP! The **Poop** button switches this off for younger players: no boss poop, the word `poop` makes nothing, and any poop on screen is cleaned up (remembered per browser). `angry bull` is the boss; `giant bull` is still an ordinary bull made bigger, and the boss is larger. Touching a boss's weakness deals heavy damage and stuns it ("WEAKNESS!"). Explosions (bombs, meteors, fireballs)
 now damage creatures too, so cannons and bombs are a fair way to fight a boss, as is an army of knights. Bosses fight
@@ -101,13 +104,13 @@ origin, e.g. `file://`, `http://localhost:8000` or a LAN host) straight from Chr
 
 | File | What it does |
 | --- | --- |
-| `js/pen.js` | Sketchy hand-drawn line renderer with a "boiling" wobble |
+| `js/pen.js` | The drawing engine: smooth rounded shapes, solid-form lighting (cached gradients), soft colour outlines; it can still draw the old sketchy wobble style |
 | `js/draw.js`, `js/draw2.js` | Procedural stick-figure templates (people, animals, birds, bugs, fish, vehicles) |
 | `js/dictionary.js` | Word registry, adjectives, plural/typo handling, autocomplete |
 | `js/words-*.js` | The ~350 definitions (animals, people & creatures, vehicles, items) |
 | `js/sound.js` | Synthesized sound effects (Web Audio) and the Sound on/off switch |
 | `js/colors.js` | The paint box: a palette (body colour plus role colours like skin, cloth, hat, window, wing) for every definition |
-| `js/bosses.js` | The thirteen giant bosses: drawings, definitions, signature attacks and weaknesses |
+| `js/bosses.js` | The fourteen giant bosses: drawings, definitions, signature attacks and weaknesses |
 | `js/entity.js` | Entity state and the AI brain (temperaments, hunting, fleeing, wander/hop/fly/flop) |
 | `js/game.js` | Physics, collisions, specials (bombs, fire, tornado, UFO beam...), particles, input, trash bin, UI, render loop |
 
