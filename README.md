@@ -119,3 +119,7 @@ Adding a word is one line in a `words-*.js` file, e.g.
 ```js
 A('otter', M(prey, { t: D.quad({ bodyW: 30, bodyH: 12, legLen: 8, tail: 'thick', whiskers: true }), speed: 120, say: ['Squeak!'] }));
 ```
+
+## License
+
+Copyright (c) 2026 Drew Shark. All rights reserved. This is **not** open source: the code is visible only so the game can be hosted on GitHub Pages. See [LICENSE](LICENSE).
