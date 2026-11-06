@@ -122,4 +122,4 @@ A('otter', M(prey, { t: D.quad({ bodyW: 30, bodyH: 12, legLen: 8, tail: 'thick',
 
 ## License
 
-Copyright (c) 2026 Drew Shark. All rights reserved. This is **not** open source: the code is visible only so the game can be hosted on GitHub Pages. See [LICENSE](LICENSE).
+Stickbox is open source under the [MIT License](LICENSE). Copyright (c) 2026 Drew Shark.
