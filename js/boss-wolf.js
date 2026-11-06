@@ -496,12 +496,14 @@
       if (o === e || !o.creature || !o.alive || o.dying || o.ko || o.static || SB.kin(e, o)) continue;
       if (Math.hypot(o.x - e.x, o.y - e.y) > R + o.w * 0.5) continue;
       if (o.def.boss) { if (Math.random() < 0.5) o.say(pick(['Hmph.', 'Nice try, puppy.', '...was that a howl?', 'I am not scared of YOU.'])); continue; }
-      o.setMood('scared', 3.5);
-      if (!o.controlled) { o.fleeT = 3.2; o.fleeFrom = e; o.threat = e; o.target = null; o.victim = null; o.attacker = null; o.scanT = 0.4; }
+      // heroes (knights, soldiers...) only flinch: an army can still stand and fight it
+      const brave = o.tags && o.tags.has('hero');
+      o.setMood('scared', brave ? 1 : 3.5);
+      if (!o.controlled) { o.fleeT = brave ? 0.9 : 3.2; o.fleeFrom = e; o.threat = e; o.target = null; o.victim = null; o.attacker = null; o.scanT = 0.4; }
       const dir = o.x >= e.x ? 1 : -1, m = Math.min(1, 4 / Math.sqrt(Math.max(0.2, o.mass)));
       if (o.move !== 'none') { o.vx += dir * 240 * m; if (o.grounded && !o.flying) { o.vy = Math.min(o.vy, -260 * m); o.grounded = false; } }
       if (o.sleeping) o.sleeping = false;
-      o.say(pick(['AAAAH!', 'RUN!', 'Eeeek!', 'WOLF!', 'Mommy!', 'Nope nope nope!', 'Yikes!', 'Every man for himself!']));
+      o.say(brave ? pick(['Steady!', 'Hold the line!', 'I fear no wolf!', 'Gulp... CHARGE!']) : pick(['AAAAH!', 'RUN!', 'Eeeek!', 'WOLF!', 'Mommy!', 'Nope nope nope!', 'Yikes!', 'Every man for himself!']));
       W.burst('sparkle', o.x, o.top, 2, 60, { size: 4, life: 0.5 });
       n++;
     }
@@ -590,7 +592,7 @@
       if (o.right < lo || o.left > hi || o.bottom < e.top - 30 || o.top > e.bottom + 10) continue;
       e.hitIds.add(o.id);
       const m = Math.min(1.3, 6 / Math.sqrt(Math.max(0.2, o.mass)));
-      W.hurt(o, o.def.boss ? 4 : 5, e, { quiet: true });
+      W.hurt(o, o.def.boss ? 4 : 3, e, { quiet: true });   // hard, but not a one-bite K.O. for a knight
       if (!o.def.boss) { o.vx = f * (360 + Math.random() * 140) * m; o.vy = -(380 + Math.random() * 120) * m; o.grounded = false; o.angVel = (Math.random() - 0.5) * 14; o.dizzy = Math.max(o.dizzy, 1.3); }
       o.say(pick(['CHOMPED!', 'YEOWCH!', 'It bit me!', 'AAAH!']));
       W.popText(o.x, o.top - 24, pick(['CHOMP!', 'CRUNCH!', 'SNAP!']), 30); W.sfx('snip', o.x); W.freezeFrame(0.08); W.shake(7);
