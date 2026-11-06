@@ -83,13 +83,15 @@
     fireball: '#ff8c1a', web: '#f4f4f4', icicle: '#cfeeff', venom: '#7bd88f', stinger: '#e0a030',
     // bosses
     kraken: { body: '#5e1a26', fin: '#3f0f18', beak: '#1a0f0a', eyeGlow: '#ffd23f' }, 'mega robot': { body: '#4a5058', armor: '#2a2e34', metal: '#6b737c' }, 'king kong': { body: '#1a1412', skin: '#3a2a24', gold: K.gold, mouth: '#3a0d0d', eyeGlow: '#ff3b14' },
-    hydra: { body: '#24382a', spike: '#a8a58a', horn: '#d9d0b8', mouth: '#4a0d0d', eyeGlow: '#ffde33' }, 'lava golem': { body: '#262222' }, 'giant spider': { body: '#1c1512', leg: '#21170f', band: '#7a2416', eye: '#ff2a14' }, 'giant moth': { body: '#3a2e26', wing: '#6e5d4c', eyeGlow: '#ff5a1f' }, 'ice golem': { body: '#a9d4ea', spike: '#e4f6ff' },
+    hydra: { body: '#24382a', spike: '#a8a58a', horn: '#d9d0b8', mouth: '#4a0d0d', eyeGlow: '#ffde33' }, 'lava golem': { body: '#262222' }, 'giant spider': { body: '#1c1512', leg: '#21170f', band: '#7a2416', eye: '#ff2a14' }, 'giant moth': { body: '#3a2e26', wing: '#6e5d4c', eyeGlow: '#ff5a1f' }, phoenix: { body: '#7a1c0a', wing: '#e0480f', tail: '#f07d12', beak: '#e2ad45', leg: '#3a2a20', eyeGlow: '#fff07a' }, 'ice golem': { body: '#a9d4ea', spike: '#e4f6ff' },
     'giant snake': { body: '#1d3320', belly: '#7d8a52', hood: '#253f22', mouth: '#4a0d0d' },
     'giant angry bull': { body: '#1c1310', far: '#120c0a', hoof: '#0d0d0d', horn: '#d9ccb0', snout: '#3a2a24', hair: '#0d0907' },
     'giant praying mantis': { body: '#7a8048', far: '#4f5430', leg: '#6e7440', wing: '#9a9a5e', eye: '#ff3b1f', belly: '#b5b07a' },
     'beetle swarm': { body: '#16161a', dark: '#0b0b0b', horn: '#1e120c', far: '#0c0c10', gold: '#f2b632' },
     'wasp swarm': { body: '#e0780f', dark: '#160e06', wing: '#d8e2ea', gold: '#f2b632' },
-    'giant scorpion': { body: '#141418', far: '#0b0b0e', leg: '#1d1b22', band: '#5a1d14' }
+    'giant scorpion': { body: '#141418', far: '#0b0b0e', leg: '#1d1b22', band: '#5a1d14' },
+    'giant dragon': { body: '#2b1513', belly: '#682a18', wing: '#4e1510', spike: '#1a1110', horn: '#cfc2a4', mouth: '#3a0a08', teeth: '#eee3c6', claw: '#120c0a', ember: '#ff6a10', eyeGlow: '#ff9a1a' },
+    'ice dragon': { body: '#bcd9ea', belly: '#6f93b2', wing: '#9cc6e0', spike: '#d8f2ff', horn: '#eefaff', mouth: '#17344f', teeth: '#f4fbff', claw: '#3a5670', ember: '#6fd0ff', eyeGlow: '#7fe6ff' }
   };
   // one colour per filled shape, in the order the item draws them
   const SEQ = {

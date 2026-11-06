@@ -10,7 +10,7 @@
     const s = o.s;
     const w = (o.longNeck ? 34 : 30) * s;
     const h = (o.upright ? 30 : o.longLegs ? 44 : o.longNeck ? 34 : 24) * s;
-    return { w, h, draw(p, e, t) { D.drawBird(p, e, t, o, s, w, h); } };
+    return { kind: 'bird', o, w, h, draw(p, e, t) { D.drawBird(p, e, t, o, s, w, h); } };
   };
   D.drawBird = function (p, e, t, o, s, w, h) {
     p.use('body');
@@ -100,7 +100,7 @@
     s = s || 1;
     const sizes = { bee: [22, 16], fly: [16, 12], mosquito: [24, 12], butterfly: [30, 24], moth: [30, 24], spider: [30, 18], ant: [22, 10], ladybug: [18, 12], beetle: [18, 12], snail: [26, 18], worm: [26, 8], caterpillar: [28, 10], grasshopper: [28, 14], dragonfly: [30, 14], scorpion: [30, 16] };
     const [w, h] = sizes[kind] || [20, 14];
-    return { w: w * s, h: h * s, draw(p, e, t) { p.ctx.scale(s, s); D.drawBug(p, e, t, kind); } };
+    return { kind: 'bug', sub: kind, k: s, w: w * s, h: h * s, draw(p, e, t) { p.ctx.scale(s, s); D.drawBug(p, e, t, kind); } };
   };
   D.drawBug = function (p, e, t, kind) {
     p.use('body');
@@ -205,7 +205,7 @@
     s = s || 1;
     const sizes = { fish: [34, 18], goldfish: [36, 20], clownfish: [34, 18], shark: [74, 40], whale: [120, 56], dolphin: [66, 30], octopus: [36, 38], crab: [48, 28], jellyfish: [30, 36], starfish: [30, 30], lobster: [50, 22], seahorse: [16, 30], pufferfish: [34, 34] };
     const [w, h] = sizes[kind] || [30, 16];
-    return { w: w * s, h: h * s, draw(p, e, t) { p.ctx.scale(s, s); D.drawFish(p, e, t, kind); } };
+    return { kind: 'fish', sub: kind, k: s, w: w * s, h: h * s, draw(p, e, t) { p.ctx.scale(s, s); D.drawFish(p, e, t, kind); } };
   };
   D.drawFish = function (p, e, t, kind) {
     p.use('body');
@@ -328,7 +328,7 @@
   // ---------- reptiles & amphibians ----------
   D.snake = function (o) {
     o = Object.assign({ len: 50, s: 1, rattle: false, hood: false }, o);
-    return { w: (o.len + 12) * o.s, h: 16 * o.s, draw(p, e, t) { p.ctx.scale(o.s, o.s); D.drawSnake(p, e, t, o); } };
+    return { kind: 'snake', o, w: (o.len + 12) * o.s, h: 16 * o.s, draw(p, e, t) { p.ctx.scale(o.s, o.s); D.drawSnake(p, e, t, o); } };
   };
   D.drawSnake = function (p, e, t, o) {
     p.use('body');
@@ -361,7 +361,7 @@
   D.frog = function (s) {
     s = s || 1;
     return {
-      w: 30 * s, h: 20 * s, draw(p, e, t) {
+      kind: 'frog', k: s, w: 30 * s, h: 20 * s, draw(p, e, t) {
         p.ctx.scale(s, s);
         p.use('body');
         const c = p.ctx, base = p.fill, light = SB.mixColor(base, '#fff', 0.45), dk = SB.shade(base, 0.22);
@@ -427,7 +427,7 @@
       blimp: [124, 56], icecreamtruck: [124, 66], digger: [110, 70]
     };
     const [w, h] = sizes[kind] || [80, 40];
-    return { w, h, draw(p, e, t) { p.ctx.translate(0, h / 2); D.drawVehicle(p, e, t, kind, o); } };
+    return { kind: 'vehicle', sub: kind, o, w, h, draw(p, e, t) { p.ctx.translate(0, h / 2); D.drawVehicle(p, e, t, kind, o); } };
   };
 
   D.drawVehicle = function (p, e, t, kind, o) {
@@ -632,7 +632,7 @@
   // ---------- werewolf: hunched, shaggy, clawed ----------
   D.werewolf = function (size) {
     const u = (size || 86) / 86;
-    return { w: 60 * u, h: 86 * u, draw(p, e, t) { p.ctx.translate(-2 * u, 3 * u); D.drawWerewolf(p, e, t, u); } };
+    return { kind: 'werewolf', k: u, w: 60 * u, h: 86 * u, draw(p, e, t) { p.ctx.translate(-2 * u, 3 * u); D.drawWerewolf(p, e, t, u); } };
   };
   D.drawWerewolf = function (p, e, t, u) {
     p.use('body');

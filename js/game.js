@@ -897,6 +897,7 @@
   // ---------- input ----------
   function cursorPos(ev) {
     const r = canvas.getBoundingClientRect();
+    if (W.mode3d) return SB.M3.unproject(ev.clientX - r.left, ev.clientY - r.top);
     return { x: (ev.clientX - r.left), y: (ev.clientY - r.top) };
   }
   function topmostAt(x, y) {
@@ -1037,6 +1038,15 @@
     const setSound = v => { if (SB.sfx) SB.sfx.setOn(v); soundBtn.textContent = 'Sound: ' + (v ? 'ON' : 'OFF'); soundBtn.classList.toggle('on', v); };
     setSound(!SB.sfx || SB.sfx.on);
     soundBtn.addEventListener('click', () => { setSound(!(SB.sfx && SB.sfx.on)); if (SB.sfx) { SB.sfx.unlock(); W.sfx('pop'); } });
+    const btn3d = document.getElementById('btn3d');
+    const set3d = v => {
+      v = v && !!W.c3; W.mode3d = v; if (W.c3) W.c3.hidden = !v; if (!v && SB.M3) SB.M3.clear();
+      btn3d.textContent = '3D: ' + (v ? 'ON' : 'OFF'); btn3d.classList.toggle('on', v); btn3d.disabled = !W.c3;
+      try { localStorage.setItem('stickbox3d', v ? '1' : '0'); } catch (err) { /* private mode */ }
+    };
+    let want3d = true; try { want3d = localStorage.getItem('stickbox3d') !== '0'; } catch (err) { /* private mode */ }
+    set3d(want3d);
+    btn3d.addEventListener('click', () => { set3d(!W.mode3d); W.toast(W.mode3d ? '3D world' : 'Painted 2D world', 1.8); });
     const help = document.getElementById('help');
     const wish = document.getElementById('wishList');
     const renderWish = () => {
@@ -1353,6 +1363,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = '#eaf6ff'; ctx.fillRect(0, 0, W.W, W.H);
     ctx.strokeStyle = '#000'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const at = W.mode3d ? (x, y) => SB.M3.at(ctx, x, y, dpr) : null;   // 3D: the 2D layer draws on top, placed where things appear
+    if (at) { render3dOverlay(t, at); return; }
     if (W.shakeT > 0) { const a = W.shakeA * (W.shakeT / 0.25); ctx.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
     drawBackground(t);
     drawBin(t);
@@ -1369,18 +1381,38 @@
     ctx.restore();
     for (const e of W.entities) if (e.alive && e !== W.held) drawEntity(e, t);
     if (W.held && W.held.alive) drawEntity(W.held, t);
-    for (const e of W.entities) if (e.alive && e.def.drawWorld) { ctx.save(); pen.begin(e.seed, boil); ctx.lineWidth = 1.5; e.def.drawWorld(pen, ctx, e, t); ctx.restore(); }
-    for (const p of W.particles) drawParticle(p, t);
+    drawOverlay(t, null);
+  }
+  // the 3D mode's 2D layer: flames on burning things, then everything drawOverlay draws
+  function render3dOverlay(t, at) {
+    ctx.clearRect(0, 0, W.W, W.H);
+    for (const e of W.entities) if (e.alive && e.onFire > 0 && !e.dying) {
+      ctx.save(); at(e.x, e.y); ctx.translate(e.x, e.y); ctx.scale(e.scale, e.scale); pen.begin(e.seed, boil); ctx.lineWidth = 1.5; ctx.strokeStyle = '#3b322b';
+      for (let k = 0; k < 3; k++) { const fx = (((k * 37 + e.seed * 10) % 100) / 100 - 0.5) * e.def.w * 0.7, fy = (((k * 53 + e.seed * 7) % 100) / 100 - 0.2) * e.def.h * 0.6; D.flame(pen, fx, fy, 5 + k * 2 + Math.min(10, e.def.h * 0.06), t, e.seed + k); }
+      ctx.restore();
+    }
+    drawOverlay(t, at);
+  }
+  // particles, swarms, health bars, names, speech bubbles, the welcome text and the driving HUD
+  function drawOverlay(t, at) {
+    const dpr = W.dpr, place = at || (() => {}), screen = () => ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const e of W.entities) if (e.alive && e.def.drawWorld && !(at && e._m3 && e._m3.ownsWorld)) { ctx.save(); place(e.x, e.y); pen.begin(e.seed, boil); ctx.lineWidth = 1.5; e.def.drawWorld(pen, ctx, e, t); ctx.restore(); }
+    for (const p of W.particles) { if (at) { ctx.save(); at(p.x, p.y); drawParticle(p, t); ctx.restore(); } else drawParticle(p, t); }
     for (const e of W.entities) if (e.alive && e.creature && !e.ko && !e.dying && e.hp < e.hpMax && !e.def.boss) {
+      if (at) { ctx.save(); at(e.x, e.top); }
       const bw = clamp(e.w, 24, 60); pen.begin(e.seed + 9, boil); ctx.lineWidth = 1.6;
       pen.rect(e.x - bw / 2, e.top - 10, bw, 5, '#fff'); ctx.fillStyle = '#ffd23f'; ctx.fillRect(e.x - bw / 2, e.top - 10, bw * clamp(e.hpShown, 0, e.hpMax) / e.hpMax, 5); ctx.fillStyle = '#2ecc71'; ctx.fillRect(e.x - bw / 2, e.top - 10, bw * Math.max(0, e.hp) / e.hpMax, 5);
+      if (at) ctx.restore();
     }
     for (const e of W.entities) if (e.alive && e.def.boss && !e.dying) {
+      if (at) { ctx.save(); at(e.x, e.top); }
       const bw = clamp(e.w * 0.9, 90, 170), by = e.top - 30; pen.begin(e.seed + 9, boil); ctx.lineWidth = 2;
       pen.rect(e.x - bw / 2, by, bw, 9, '#fff'); ctx.fillStyle = '#ffd23f'; ctx.fillRect(e.x - bw / 2 + 1, by + 1, (bw - 2) * clamp(e.hpShown, 0, e.hpMax) / e.hpMax, 7); ctx.fillStyle = '#e63946'; ctx.fillRect(e.x - bw / 2 + 1, by + 1, (bw - 2) * Math.max(0, e.hp) / e.hpMax, 7);
       pen.text(e.def.name.toUpperCase() + (e.ko ? '  K.O.' : ''), e.x, by - 10, 14);
+      if (at) ctx.restore();
     }
-    for (const e of W.entities) if (e.alive) drawBubble(e);
+    for (const e of W.entities) if (e.alive && e.bubble) { if (at) { ctx.save(); at(e.x, e.top); drawBubble(e); ctx.restore(); } else drawBubble(e); }
+    screen();
     if (W.flash > 0) { ctx.save(); ctx.globalAlpha = W.flash; ctx.fillStyle = '#fff'; ctx.fillRect(-20, -20, W.W + 40, W.H + 40); ctx.restore(); }
     // welcome hint
     if (W.entities.length === 0 && W.stats.spawned === 0) {
@@ -1393,11 +1425,11 @@
     const ce = W.ctrl.e;
     if (ce && ce.alive) {
       const bob = Math.sin(t * 5) * 4, mx = ce.x, my = Math.max(78, ce.top - (ce.def.boss ? 58 : 30) + bob);   // stay below the help strip
-      ctx.save(); ctx.fillStyle = '#2ecc71'; ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2;
+      ctx.save(); place(mx, my); ctx.fillStyle = '#2ecc71'; ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(mx - 9, my - 10); ctx.lineTo(mx + 9, my - 10); ctx.lineTo(mx, my); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.font = 'bold 13px ' + SB.FONT; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.strokeText('YOU', mx, my - 18); ctx.fillStyle = '#145a32'; ctx.fillText('YOU', mx, my - 18);
       if (!ce.def.boss) { const bw = 46; ctx.fillStyle = '#fff'; ctx.fillRect(mx - bw / 2, my - 34, bw, 5); ctx.fillStyle = '#2ecc71'; ctx.fillRect(mx - bw / 2, my - 34, bw * Math.max(0, ce.hp) / ce.hpMax, 5); ctx.strokeStyle = '#145a32'; ctx.lineWidth = 1; ctx.strokeRect(mx - bw / 2, my - 34, bw, 5); }
-      ctx.restore();
+      ctx.restore(); screen();
       const hud = 'Driving: ' + ce.def.name + (ce.ko ? ' (knocked out: click it to revive)' : '') + '   ·   arrows/WASD move   ·   up/space ' + (ce.move === 'fly' || ce.move === 'float' ? 'fly up, down fly down' : 'jump') + '   ·   F attack   ·   E special   ·   Esc let go';
       ctx.save(); ctx.font = '15px ' + SB.FONT; const tw = ctx.measureText(hud).width + 24;
       ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(W.W / 2 - tw / 2, 8, tw, 26); ctx.strokeStyle = '#145a32'; ctx.lineWidth = 2; ctx.strokeRect(W.W / 2 - tw / 2, 8, tw, 26);
@@ -1416,6 +1448,7 @@
     canvas.width = Math.floor(W.W * dpr); canvas.height = Math.floor(W.H * dpr);
     canvas.style.width = W.W + 'px'; canvas.style.height = W.H + 'px';
     W.groundY = Math.floor(W.H - Math.max(44, W.H * 0.09));
+    if (W.c3) { W.c3.style.top = barH + 'px'; SB.M3.resize(W.W, W.H, Math.min(dpr, 1.5), W.groundY); }
     W.bin.x = W.W - 52; W.bin.y = W.groundY;
     for (const e of W.entities) { e.x = clamp(e.x, e.w / 2, W.W - e.w / 2); e.y = Math.min(e.y, W.groundY - e.h / 2); }
   }
@@ -1458,13 +1491,17 @@
     if (b.wob > 0) b.wob -= dt * 2.5;
     if (W.shakeT > 0) { W.shakeT -= dt; if (W.shakeT <= 0) W.shakeA = 0; }
     if (W.flash > 0) W.flash -= dt * 2.5;
+    if (W.mode3d) SB.M3.sync(W.time, dt);
     render(W.time);
+    if (W.mode3d) SB.M3.render();
   }
 
   window.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('c');
     ctx = canvas.getContext('2d');
     pen = new SB.Pen(ctx);
+    const c3 = document.getElementById('c3');
+    if (c3 && SB.M3 && SB.M3.init(c3)) { W.c3 = c3; W.mode3d = true; } else if (c3) c3.hidden = true;
     resize();
     window.addEventListener('resize', resize);
     canvas.addEventListener('pointerdown', onDown);

@@ -1071,6 +1071,537 @@
     foreleg(false);
   };
 
+  // ---------- the phoenix: a giant bird of living fire ----------
+  D.phoenixBeak = [88, -30];   // template coords of the beak tip (where its fireballs come from)
+  D.PHX_REBIRTH = 3.6;         // seconds from bursting into flame to rising from the ashes
+  D.phoenix = function () { return { w: 170, h: 150, draw(p, e, t) { if (e.rebirthT > 0) D.drawPhoenixRebirth(p, e, t); else D.drawPhoenix(p, e, t); } }; };
+  // a flame-shaped feather from (x,y) along angle a: the vane with a dark edge, and a glowing inner flame toward the tip.
+  // Drawn straight onto the canvas (flat colour, soft dark edge): a phoenix wears a couple of hundred of them.
+  const FEATHER_EDGE = new Map();
+  const featherPath = (c, x, y, ca, sa, len, wid, P) => {   // smooth closed outline through (u,v) pairs, sharp at the tongue tips (v < -0.05 marks none)
+    const n = P.length / 2, X = i => x + ca * P[i * 2] * len - sa * P[i * 2 + 1] * wid, Y = i => y + sa * P[i * 2] * len + ca * P[i * 2 + 1] * wid;
+    c.beginPath(); c.moveTo((X(n - 1) + X(0)) / 2, (Y(n - 1) + Y(0)) / 2);
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; c.quadraticCurveTo(X(i), Y(i), (X(i) + X(j)) / 2, (Y(i) + Y(j)) / 2); }
+    c.closePath();
+  };
+  const FV = [0, -0.2, 0.3, -0.52, 0.62, -0.47, 0.84, -0.3, 1.08, -0.1, 0.9, 0.06, 1.02, 0.26, 0.8, 0.44, 0.45, 0.52, 0.12, 0.32], FV2 = FV.slice();
+  const FT = [0.4, -0.22, 0.7, -0.24, 0.98, -0.1, 0.82, 0.08, 0.92, 0.24, 0.6, 0.24], FT2 = FT.slice();
+  D.fireFeather = function (p, x, y, a, len, wid, col, tip, t, seed) {
+    const c = p.ctx, ca = Math.cos(a), sa = Math.sin(a), fl = Math.sin(t * 12 + seed) * 0.07, fl2 = Math.sin(t * 17 + seed * 1.7) * 0.06;
+    FV2[6] = FV[6] + fl; FV2[8] = FV[8] + fl * 2; FV2[12] = FV[12] + fl2 * 2;   // the tongues of the tip flicker
+    let edge = FEATHER_EDGE.get(col); if (!edge) { edge = SB.shade(col, 0.5); FEATHER_EDGE.set(col, edge); }
+    const lw = c.lineWidth;
+    featherPath(c, x, y, ca, sa, len, wid, FV2); c.fillStyle = col; c.fill(); if (len > 21) { c.strokeStyle = edge; c.lineWidth = lw * 0.4; c.stroke(); }
+    if (tip) { FT2[4] = FT[4] + fl * 2; FT2[8] = FT[8] + fl2 * 2; featherPath(c, x, y, ca, sa, len, wid, FT2); c.fillStyle = tip; c.fill(); }
+    c.lineWidth = lw;
+  };
+  // a soft, glowing tongue of fire standing on (x,y): layered tongues, red-orange outside, white-hot inside
+  const tongue = (c, x, y, r, h, sw) => {
+    c.beginPath(); c.moveTo(x - r, y);
+    c.bezierCurveTo(x - r * 1.15, y - h * 0.45, x + sw - r * 0.35, y - h * 0.72, x + sw, y - h);
+    c.bezierCurveTo(x + sw * 0.6 + r * 0.25, y - h * 0.62, x + r * 1.15, y - h * 0.4, x + r, y);
+    c.quadraticCurveTo(x, y + r * 0.7, x - r, y); c.fill();
+  };
+  D.softFlame = function (p, x, y, r, t, seed, alpha) {
+    const c = p.ctx, f = 1 + Math.sin(t * 13 + seed) * 0.16 + Math.sin(t * 21 + seed * 2.3) * 0.08, sw = Math.sin(t * 9 + seed * 1.3) * r * 0.35, h = r * 2.7 * f;
+    const a0 = c.globalAlpha; c.globalAlpha = a0 * (alpha == null ? 1 : alpha);
+    c.fillStyle = 'rgba(235,70,15,0.45)'; tongue(c, x, y + r * 0.1, r * 1.25, h * 1.12, sw * 1.2);
+    c.fillStyle = 'rgba(255,150,30,0.85)'; tongue(c, x, y, r, h, sw);
+    c.fillStyle = 'rgba(255,215,90,0.95)'; tongue(c, x, y, r * 0.66, h * 0.66, sw * 0.6);
+    c.fillStyle = 'rgba(255,250,215,0.95)'; tongue(c, x, y, r * 0.36, h * 0.36, sw * 0.3);
+    c.globalAlpha = a0;
+  };
+  D.drawPhoenix = function (p, e, t) {
+    const c = p.ctx, mood = e.mood, held = e.held, ko = e.ko;
+    const flying = e.flying && !held, diving = e.diveT > 0, swoopUp = diving && e.divePh === 'up';
+    const flapping = e.throwT > 0, windup = e.throwT > 0.32;
+    const grounded = !flying && !held && !ko && e.grounded;
+    const angry = mood === 'angry' || e.mode === 'hunt' || diving || flapping;
+    const burnt = ko && e.reborn && !(e.rebirthT > 0);   // the final knock-out: the fire has gone out of it
+    const tint = p.tint;   // hit flash and poison
+    const ash = k => { if (burnt) k = SB.mixColor(k, '#3a3230', 0.72); return tint ? SB.mixColor(k, tint, 0.55) : k; };
+    const col = r => ash(p.use(r).fill);
+    const body = col('body'), wingC = col('wing'), tailC = col('tail'), beakC = col('beak'), legC = tint ? ash(p.use('leg').fill) : p.use('leg').fill;
+    const gold = '#ffd23f', hot = '#fff1a8';
+    const tipOf = k => burnt ? SB.shade(k, 0.1) : SB.mixColor(k, gold, 0.72);
+    // wing beat: s is the wing's vertical stretch (1 = raised high over the back, negative = swept down below the body)
+    let s, rot;
+    if (held) { s = Math.sin(t * 16) * 0.9; rot = 0; }
+    else if (ko) { s = -0.4; rot = -0.5; }
+    else if (diving && !swoopUp) { s = 0.42 + Math.sin(t * 30) * 0.03; rot = -1.0; }
+    else if (swoopUp) { s = Math.sin(t * 15); rot = -0.15; }
+    else if (flapping) { s = windup ? 1 : -0.85; rot = windup ? 0.1 : 0.3; }
+    else if (flying) { s = 0.15 + 0.85 * Math.sin(t * 6.5 + e.seed); rot = -0.1 + Math.cos(t * 6.5 + e.seed) * 0.14; }
+    else { s = 0.36; rot = -0.85; }
+    const s2 = held || flying ? s * 0.92 + 0.05 : s;
+    c.save();
+    c.rotate(e.pitch || 0);   // nose down in a dive, up as it pulls out
+    // heat glow around the whole bird
+    if (!burnt) {
+      const gl = 0.24 + 0.06 * Math.sin(t * 9 + e.seed), g = c.createRadialGradient(0, -6, 10, 0, -6, 130);
+      g.addColorStop(0, 'rgba(255,175,60,' + gl + ')'); g.addColorStop(1, 'rgba(255,90,20,0)');
+      c.save(); c.fillStyle = g; c.beginPath(); c.arc(0, -6, 130, 0, TAU); c.fill(); c.restore();
+    }
+    // a wing in its own frame: shoulder at the origin, raised toward -y, the trailing edge toward -x
+    const E = [-16, -30], Wr = [4, -54], Tp = [-44, -80];   // elbow, wrist, wing tip
+    const wing = (sx, sy, s, rot, far) => {
+      const k = far ? 0.3 : 0;
+      const wc = SB.shade(wingC, k), bc = SB.shade(body, k), sc2 = SB.shade(tailC, k + 0.06), tc = far ? SB.shade(tipOf(wingC), 0.2) : tipOf(wingC);
+      const cr = Math.cos(rot), sr = Math.sin(rot);
+      const toG = (x, y) => [sx + x * cr - y * s * sr, sy + x * sr + y * s * cr];   // wing frame -> drawing
+      c.save(); c.translate(sx, sy); c.rotate(rot); c.scale(1, s);
+      // the web of the wing under the feathers, so no sky shows between them
+      p.poly([0, 4, -18, 0, -38, -10, -52, -30, Tp[0] + 2, Tp[1] + 4, Wr[0] - 6, Wr[1] + 4, E[0], E[1]], SB.shade(wc, 0.45));
+      // secondaries hang back from the forearm, primaries fan out from the hand like fingers of flame
+      for (let i = 5; i >= 0; i--) { const f = i / 5, bx = -4 + (Wr[0] + 2) * f, by = -2 + (Wr[1] + 2) * f; D.fireFeather(p, bx - 4, by, Math.PI - 0.08 - f * 0.3, 44 + f * 6, 18, sc2, tc, t, e.seed + i); }
+      for (let i = 0; i <= 5; i++) { const f = i / 5, bx = Wr[0] + (Tp[0] - Wr[0]) * f * 0.85, by = Wr[1] + (Tp[1] - Wr[1]) * f * 0.85; D.fireFeather(p, bx, by, Math.atan2(-0.3 - f * 0.65, -1 + f * 0.35), 48 + Math.sin(f * 2.6) * 14, 16, wc, tc, t, e.seed + 10 + i); }
+      // the leading edge: shoulder, elbow, wrist and hand
+      p.poly([-6, 6, 6, -4, 3, -26, 9, -46, 7, -56, -2, -59, Tp[0] - 2, Tp[1] - 2, Tp[0] + 4, Tp[1] + 5, -8, -50, -6, -30, -10, -8], bc);
+      // coverts: overlapping rows of shorter feathers over the arm and hand, darker toward the edge
+      for (let i = 0; i < 6; i++) { const f = (i + 0.5) / 6, bx = 0 + (Wr[0] - 2) * f, by = 0 + Wr[1] * f; D.fireFeather(p, bx, by, Math.PI - 0.05 - f * 0.2, 30, 14, SB.mixColor(wc, sc2, 0.4), tc, t, e.seed + 20 + i); }
+      for (let i = 0; i < 4; i++) { const f = (i + 0.5) / 4, bx = Wr[0] + (Tp[0] - Wr[0]) * f * 0.75, by = Wr[1] + (Tp[1] - Wr[1]) * f * 0.75; D.fireFeather(p, bx, by, Math.atan2(-0.35 - f * 0.4, -1), 28, 12, wc, tc, t, e.seed + 30 + i); }
+      c.save(); c.globalAlpha *= 0.35; p.curve(6, -6, 2, -28, 8, -52); c.restore();
+      c.restore();
+      if (!burnt && s > 0.2) { const [fx, fy] = toG(Tp[0] - 34, Tp[1] - 30); D.softFlame(p, fx, fy + 6, far ? 6 : 8, t, e.seed + (far ? 4 : 7), 0.85); }
+    };
+    // tail: long flowing plumes that stream out behind, each ending in a burning eye-feather
+    const tail = back => {
+      const n = 7;
+      if (!back) for (let i = 0; i < 5; i++) D.fireFeather(p, -22, 0 + i * 3, Math.PI - 0.25 + i * 0.13, 40, 17, SB.shade(tailC, 0.12 - i * 0.02), tipOf(tailC), t, e.seed + 80 + i);   // tail coverts
+      for (let i = back ? 0 : 3; i < (back ? 3 : n); i++) {
+        const f = i / (n - 1), sway = Math.sin(t * 3 + i * 0.8 + e.seed) * (diving ? 3 : 8), sway2 = Math.sin(t * 2.4 + i * 1.1 + e.seed) * (diving ? 4 : 13);
+        const droop = grounded ? 26 : diving ? -6 : 0;
+        const x0 = -20, y0 = 2 + f * 6, cx = -64, cy = 4 + f * 16 + sway + droop * 0.5, x1 = -112 + f * 14, y1 = 2 + f * 36 + sway2 + droop;
+        const tc = SB.shade(tailC, back ? 0.28 : (i % 2) * 0.1);
+        const mid = D.tube(p, x0, y0, cx, cy, x1, y1, 13, 4, 8, tc);
+        for (let j = 2; j < mid.length - 1; j += 3) { const [mx, my] = mid[j], [nx, ny] = mid[j + 1]; const a = Math.atan2(ny - my, nx - mx); D.fireFeather(p, mx, my, a + (j % 2 ? 0.3 : -0.3), 26 - j * 1.5, 8, SB.shade(tailC, back ? 0.32 : 0.04 + (j % 2) * 0.06), null, t, e.seed + i * 7 + j); }
+        const [ex, ey] = mid[mid.length - 1], [px, py] = mid[mid.length - 2], a = Math.atan2(ey - py, ex - px);
+        D.fireFeather(p, ex - Math.cos(a) * 6, ey - Math.sin(a) * 6, a, 40, 16, tc, tipOf(tailC), t, e.seed + 40 + i);
+        if (back || i % 2) continue;
+        c.save();
+        p.ellipse(ex + Math.cos(a) * 12, ey + Math.sin(a) * 12, 6, 4.2, burnt ? '#4a3e38' : hot, a);
+        p.ellipse(ex + Math.cos(a) * 12, ey + Math.sin(a) * 12, 3, 2.2, burnt ? '#2a2422' : SB.shade(body, 0.1), a); c.restore();
+      }
+    };
+    // a leg: feathered thigh, scaly shank and four taloned toes (open: 0 curled .. 1 spread to grab)
+    const leg = (hx, hy, kx, ky, fx, fy, ta, open, far) => {
+      const k = far ? 0.3 : 0;
+      for (let i = 0; i < 3; i++) D.fireFeather(p, hx - 6 + i * 6, hy - 4, Math.atan2(ky - hy, kx - hx) + (i - 1) * 0.3, 22, 12, SB.shade(body, k + 0.05), null, t, e.seed + 50 + i);
+      D.cap(p, kx, ky, fx, fy, 7, 5, SB.shade(legC, k));
+      c.save(); c.globalAlpha *= 0.4; D.hatch(p, kx + (fx - kx) * 0.15, ky + (fy - ky) * 0.15, kx + (fx - kx) * 0.9, ky + (fy - ky) * 0.9, 4, 3, Math.atan2(fy - ky, fx - kx) + 1.4); c.restore();
+      const toe = (a, L) => {
+        const tx = fx + Math.cos(a) * L, ty = fy + Math.sin(a) * L;
+        D.cap(p, fx, fy, tx, ty, 4.2, 3.2, SB.shade(legC, k));
+        const nx = -Math.sin(a), ny = Math.cos(a), ca = Math.cos(a + 1.1 - open * 0.4), sa = Math.sin(a + 1.1 - open * 0.4);   // a hooked black talon
+        p.poly([tx - nx * 1.8, ty - ny * 1.8, tx + Math.cos(a) * 3 + ca * 6, ty + Math.sin(a) * 3 + sa * 6, tx + nx * 1.8, ty + ny * 1.8], '#1a1210');
+      };
+      const sp = 0.25 + open * 0.45;
+      toe(ta - sp, 12); toe(ta + sp, 11); toe(ta, 14); toe(ta + Math.PI - 0.3, 8);
+    };
+    let L;   // leg pose: hip, knee, foot, toe direction, how open the talons are
+    if (held) { const sw = Math.sin(t * 14) * 4; L = [2, 14, 2 + sw, 34, 4 - sw, 54, Math.PI / 2, 0.9]; }
+    else if (diving && !swoopUp) L = [6, 14, 20, 30, 38, 42, 0.5, 1];
+    else if (flying || swoopUp) L = [2, 14, -8, 26, -26, 30, Math.PI - 0.5, 0.15];
+    else if (ko) L = [2, 14, -4, 34, -2, 52, Math.PI / 2, 0.3];
+    else L = [2, 14, -6, 46, 4, 70, 0, 0.55];
+    const legs = far => leg(L[0] + (far ? 6 : 0), L[1] - (far ? 2 : 0), L[2] + (far ? 6 : 0), L[3] - (far ? 2 : 0), L[4] + (far ? 7 : 0), L[5] - (far ? 2 : 0), L[6], L[7], far);
+    // ---- paint, back to front ----
+    tail(true);
+    wing(18, -22, s2, rot - 0.08, true);
+    legs(true);
+    tail(false);
+    // a body of glowing embers under the plumage
+    p.poly([46, -14, 38, -25, 18, -27, -4, -23, -22, -13, -30, 0, -24, 12, -6, 21, 14, 23, 32, 13, 43, 1], body);
+    p.poly([45, -10, 41, 2, 30, 12, 12, 19, 16, 4, 30, -6], SB.mixColor(body, tailC, 0.5));   // breast
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 4; i++) D.fireFeather(p, 30 - i * 13 - j * 6, -2 + j * 10 - i * 2, Math.PI - 0.35 + j * 0.2, 20, 11, SB.mixColor(body, tailC, 0.32 - j * 0.12), null, t, e.seed + 90 + i + j * 4);   // breast and flank feathers
+    if (!burnt) {   // embers glowing through
+      c.save();
+      for (let i = 0; i < 9; i++) { const x = -20 + ((i * 37) % 60), y = -16 + ((i * 23) % 34), k = 0.5 + 0.5 * Math.sin(t * 7 + i * 2.1 + e.seed); c.fillStyle = gold; c.globalAlpha = 0.25 * k; c.beginPath(); c.arc(x, y, 3 + k * 2, 0, TAU); c.fill(); c.fillStyle = hot; c.globalAlpha = 0.45 + 0.5 * k; c.beginPath(); c.arc(x, y, 1.2 + k, 0, TAU); c.fill(); }
+      c.restore();
+    }
+    // neck under a ruff of flame hackles
+    D.tube(p, 24, -12, 44, -18, 58, -32, 28, 18, 6, body);
+    for (let i = 0; i < 7; i++) { const f = i / 6; D.fireFeather(p, 54 - f * 28, -36 + f * 22, 2.55 + f * 0.2, 28 - f * 4, 15, SB.mixColor(body, wingC, 0.35 + (i % 2) * 0.2), tipOf(wingC), t, e.seed + 60 + i); }
+    legs(false);
+    // head: crest of fire, hooked beak, glowing eye
+    const hx = 62, hy = -37;
+    for (let i = 0; i < 6; i++) D.fireFeather(p, hx - 6 + i * 2.4, hy - 7, -2.4 - i * 0.12 + Math.sin(t * 4 + i) * 0.05, 36 - i * 3 + (angry ? 5 : 0), 11, i % 2 ? wingC : tailC, tipOf(tailC), t, e.seed + 70 + i);
+    p.ellipse(hx, hy, 14, 11, body, -0.25);
+    D.fireFeather(p, hx + 4, hy + 6, 2.7, 18, 10, SB.shade(body, -0.1), null, t, e.seed + 77);   // cheek
+    p.ellipse(hx + 2, hy - 1, 8.5, 5.5, SB.shade(body, 0.4), -0.2);   // dark mask around the eye
+    const jaw = flapping && !windup ? 0.5 : diving && !swoopUp ? 0.3 : angry && Math.sin(t * 2.3 + e.seed) > 0.6 ? 0.25 : 0;
+    c.save(); c.translate(71, -31); c.rotate(jaw);
+    p.poly([-1, 1, 10, 2, 14, 4, 1, 6], SB.shade(beakC, 0.25)); c.restore();   // lower mandible
+    if (jaw > 0.2 && !burnt) p.poly([72, -30, 84, -28, 82, -24 + jaw * 6, 73, -26], '#ffb02e');
+    p.poly([68, -44, 78, -42, 86, -37, 90, -31, 89, -24, 86, -28, 81, -31, 70, -31], beakC);   // hooked upper mandible
+    p.poly([67, -44, 73, -43, 72, -32, 67, -33], SB.shade(beakC, 0.3));   // cere
+    p.dot(75, -38, 1.1);
+    D.eye(p, hx + 3, hy - 2, 3.8, e, 1);
+    wing(10, -18, s, rot, false);
+    if (!burnt) { D.softFlame(p, -6, -20, 7, t, e.seed + 1, 0.9); D.softFlame(p, 14, -25, 6, t, e.seed + 2, 0.9); D.softFlame(p, hx - 12, hy - 26, 7, t, e.seed + 3, 0.9); }
+    c.restore();
+  };
+  // the rebirth: the bird bursts into a pillar of flame, an egg glows in a heap of ash, then it hatches and rises again
+  D.drawPhoenixRebirth = function (p, e, t) {
+    const c = p.ctx, u = 1 - e.rebirthT / D.PHX_REBIRTH, gy = 75;
+    const column = (h, a) => {   // a pillar of fire h tall standing on the ground
+      c.save(); c.globalAlpha *= a;
+      const g = c.createLinearGradient(0, gy, 0, gy - h); g.addColorStop(0, 'rgba(255,245,190,0.95)'); g.addColorStop(0.3, 'rgba(255,170,40,0.85)'); g.addColorStop(0.7, 'rgba(240,80,15,0.5)'); g.addColorStop(1, 'rgba(160,30,10,0)');
+      c.fillStyle = g; c.beginPath(); const w = 32 + h * 0.1;
+      c.moveTo(-w, gy); for (let i = 0; i <= 8; i++) { const f = i / 8; c.lineTo(-w * (1 - f * 0.75) + Math.sin(t * 9 + i * 1.7) * 7 * f, gy - h * f); }
+      for (let i = 8; i >= 0; i--) { const f = i / 8; c.lineTo(w * (1 - f * 0.75) + Math.sin(t * 11 + i * 2.3) * 7 * f, gy - h * f); }
+      c.closePath(); c.fill(); c.restore();
+      for (let i = 0; i < 5; i++) D.softFlame(p, (i - 2) * 13 + Math.sin(i * 7.1) * 4, gy, 10 + ((i * 5) % 3) * 4 + h * 0.05, t, e.seed + i * 5, a);
+    };
+    const pile = () => {
+      p.poly([-46, gy, -36, gy - 9, -18, gy - 16, 0, gy - 19, 20, gy - 15, 38, gy - 8, 48, gy], '#57504c');
+      p.poly([-30, gy, -20, gy - 8, 0, gy - 12, 22, gy - 7, 32, gy], '#3c3633');
+      c.save(); c.shadowColor = '#ff7a1a'; c.shadowBlur = 6;
+      for (let i = 0; i < 10; i++) { const x = -38 + ((i * 29) % 76), y = gy - 2 - ((i * 13) % 12), k = 0.5 + 0.5 * Math.sin(t * 5 + i * 1.9); c.fillStyle = k > 0.6 ? '#ffd23f' : '#ff6a1a'; c.globalAlpha = 0.4 + 0.6 * k; c.beginPath(); c.arc(x, y, 1.3 + k, 0, TAU); c.fill(); }
+      c.restore();
+    };
+    if (u < 0.22) {   // the old bird burns away inside a pillar of fire
+      const a = 1 - u / 0.22;
+      c.save(); c.globalAlpha *= a; c.translate(0, (1 - a) * 30); D.drawPhoenix(p, e, t); c.restore();
+      column(70 + u / 0.22 * 130, 1);
+      return;
+    }
+    pile();
+    const egg = (crack, wob) => {
+      c.save(); c.translate(0, gy - 26); c.rotate(Math.sin(t * 18) * wob);
+      c.save(); c.shadowColor = '#ff8a1a'; c.shadowBlur = 16 + 8 * Math.sin(t * 6);
+      p.ellipse(0, 0, 16, 21, '#c8431a', 0); c.restore();
+      p.ellipse(-4, -6, 7, 10, '#e8752a', -0.3);
+      c.save(); c.strokeStyle = '#ffe27a'; c.lineWidth = 1.6; c.shadowColor = '#ffb02e'; c.shadowBlur = 8;
+      if (crack > 0) p.zigzag(-14, -3, 14, -5, 3.5, Math.max(2, Math.round(crack * 8)));
+      if (crack > 0.5) { p.line(-5, -4, -8, 10); p.line(6, -5, 10, 8); }
+      c.restore(); c.restore();
+    };
+    if (u < 0.78) {
+      const k = (u - 0.22) / 0.56;
+      if (k < 0.35) column(200 * (1 - k / 0.35) + 20, 1 - k / 0.35 * 0.8);
+      egg(Math.max(0, (k - 0.3) / 0.7), k > 0.7 ? 0.12 : 0.03);
+      return;
+    }
+    // hatching: the egg bursts and the phoenix rises out of a fresh pillar of fire
+    const v = (u - 0.78) / 0.22;
+    column(210 * Math.min(1, v * 2), 1 - v * 0.4);
+    const kid = Object.assign(Object.create(e), { rebirthT: 0, ko: false, mood: 'angry', flying: true, held: false, diveT: 0, throwT: 0, pitch: -0.3 * (1 - v) });
+    c.save(); c.globalAlpha *= Math.min(1, v * 1.6); c.translate(0, (1 - v) * 50); c.scale(0.45 + 0.55 * v, 0.45 + 0.55 * v); D.drawPhoenix(p, kid, t); c.restore();
+  };
+
+  // ---------- the giant dragon: a huge ancient black-red dragon that walks and flies ----------
+  // Its pose (head, jaw, rearing up, landing crouch) comes from D.dragonPose, shared by the drawing, the 3D model
+  // and the fire breath, so the fire always leaves from exactly between its jaws.
+  //
+  // The ice dragon is the same beast with a different element: def.drgEl = 'ice' picks its colours here, and its
+  // breath, rain and stomp in the special below.
+  // the dragons' elements: the colours of the fire (or frost) in their breath, throats and eyes. rgba(i, a) picks a
+  // colour from the ramp (0 hot glow, 1 pale core, 2 bright, 3 mid, 4 deep, 5 dark, 6 darkest, 7 near-white, 8 white)
+  D.DRG_FX = {};
+  for (const [k, ramp, o] of [
+    ['fire', [[255, 230, 140], [255, 236, 170], [255, 150, 35], [255, 120, 20], [255, 60, 0], [215, 55, 10], [110, 20, 5], [255, 255, 225], [255, 255, 255]], { ember: '#ff6a10', seam: '#ffd27a', scale: '#b0301a', wingRim: '#d0401c', scar: 'rgba(210,170,150,0.5)' }],
+    ['ice', [[215, 245, 255], [235, 250, 255], [170, 228, 255], [120, 200, 250], [60, 150, 240], [90, 150, 215], [50, 80, 140], [245, 253, 255], [255, 255, 255]], { ember: '#6fd0ff', seam: '#e6fbff', scale: '#cfeeff', wingRim: '#a8dcff', scar: 'rgba(240,250,255,0.55)' }]]) {
+    D.DRG_FX[k] = Object.assign({ ramp, rgba: (i, a) => 'rgba(' + ramp[i][0] + ',' + ramp[i][1] + ',' + ramp[i][2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')' }, o);
+  }
+  D.DRG = { inhale: 0.5, breath: 1.9, tail: 0.8, beat: 0.9, land: 0.6, reach: 250 };   // attack timings (s); breath reach (template units)
+  D.DRG_PIVOT = [-44, 80];   // the hind feet: it rears up around them
+  D.DRG_HS = 1.15;           // the head is drawn this much bigger than its own frame
+  D.DRG_JAW = [-4, 5];       // the jaw hinge in the head's frame
+  D.dragonBoss = function () { return { w: 230, h: 160, draw(p, e, t) { D.drawDragonBoss(p, e, t); } }; };
+  const sm01 = u => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
+  // pose: rear (0..1, up on its hind legs), dy (crouch), head hinge (hx,hy), head angle ha, jaw opening
+  D.dragonPose = function (e, t, o) {
+    o = o || {};
+    const R = D.DRG, held = e.held, ko = e.ko, br = e.breath > 0, inh = br && e.breath > R.breath, rain = e.rainT > 0;
+    const air = !!e.flyPh && !held && !ko, seed = e.seed || 0;
+    let rear = 0;
+    if (e.beatT > 0 && !air) { const u = 1 - e.beatT / R.beat; rear = u < 0.5 ? sm01(u / 0.5) : u < 0.62 ? 1 : 1 - sm01((u - 0.62) / 0.38); }
+    o.rear = rear;
+    o.dy = e.poundT > 0 ? Math.sin(clamp(e.poundT / R.land, 0, 1) * Math.PI) * 12 : 0;
+    const sw = br || rain ? 0 : Math.sin(t * 1.3 + seed) * 3;
+    let hx = 100, hy = -64 + sw, ha = 0.22 + sw * 0.02, open = 0.1;
+    if (ko) { hx = 100; hy = -26; ha = 0.85; open = 0.32; }
+    else if (held) { hx = 98; hy = -56; ha = 0.45 + Math.sin(t * 8) * 0.25; open = 0.5; }
+    else if (inh) { const u = sm01((R.inhale + R.breath - e.breath) / R.inhale); hx = 100 - u * 14; hy = -64 - u * 12; ha = 0.22 - u * 0.75; open = 0.15 + u * 0.2; }
+    else if (br) { const u = sm01(1 - e.breath / R.breath), aim = air ? 0.3 - u * 0.4 : 0.6 - u * 0.75; open = 0.75; ha = aim - open / 2; hx = 112; hy = -52 + aim * 18; }   // sweeps from the ground at its feet up and out
+    else if (rain) { open = 0.75; ha = 1.05 - open / 2; hx = 110; hy = -36; }   // flying over, breathing straight down
+    else if (rear > 0) { hx = 100 - rear * 12; hy = -64 - rear * 14; ha = 0.22 - rear * 0.6; open = 0.1 + rear * 0.6; }
+    else if (e.whipT > 0) { hx = 96; hy = -68; ha = 0.05; open = 0.45; }
+    else if (e.sleeping || e.mood === 'sleep') { hx = 104; hy = -20; ha = 0.45; open = 0; }
+    else if (air) { hx = 110; hy = -52 + sw; ha = 0.15; open = e.mood === 'angry' ? 0.3 : 0.12; }
+    else {
+      if (e.mood === 'angry' || e.mode === 'hunt') open = 0.16 + Math.max(0, Math.sin(t * 2.1 + seed)) * 0.32;
+      if (e.moving && e.grounded) hy += Math.sin((e.phase || 0) * 2) * 2;
+    }
+    o.hx = hx; o.hy = hy; o.ha = ha; o.open = open;
+    return o;
+  };
+  const DMP = {}, DMOUTH = [0, 0, 0];
+  // where the fire comes from: halfway between the tips of the jaws, in template coords (facing +x, y down), and its direction
+  D.dragonMouth = function (e, t) {
+    const P = D.dragonPose(e, t, DMP), HS = D.DRG_HS, [jx, jy] = D.DRG_JAW, co = Math.cos(P.open), so = Math.sin(P.open);
+    const lx = 54 - jx, ly = 7 - jy, bx = jx + lx * co - ly * so, by = jy + lx * so + ly * co;   // the lower tip, turned down with the jaw
+    const x = (58 + bx) / 2 * HS, y = (2 + by) / 2 * HS, ca = Math.cos(P.ha), sa = Math.sin(P.ha);
+    let X = P.hx + x * ca - y * sa, Y = P.hy + x * sa + y * ca, A = P.ha + P.open / 2;
+    if (P.rear) { const r = -0.32 * P.rear, cr = Math.cos(r), sr = Math.sin(r), [px, py] = D.DRG_PIVOT, ux = X - px, uy = Y - py; X = px + ux * cr - uy * sr; Y = py + ux * sr + uy * cr; A += r; }
+    DMOUTH[0] = X; DMOUTH[1] = Y + P.dy; DMOUTH[2] = A;
+    return DMOUTH;
+  };
+  const qpt = (x0, y0, cx, cy, x1, y1, s, out) => { const m = 1 - s; out[0] = m * m * x0 + 2 * m * s * cx + s * s * x1; out[1] = m * m * y0 + 2 * m * s * cy + s * s * y1; return out; };
+  // the wing in its own frame: shoulder at the origin, raised toward -y, trailing edge toward -x
+  const DW = { E: [-24, -36], Wr: [6, -74], F: [[-30, -134], [-80, -118], [-116, -86], [-128, -40]], B: [-64, 6] };
+  const DP = {}, Q = [0, 0], Q2 = [0, 0];
+  D.drawDragonBoss = function (p, e, t) {
+    const c = p.ctx, tint = p.tint, P = D.dragonPose(e, t, DP), R = D.DRG;
+    const held = e.held, ko = e.ko, air = (!!e.flyPh || e.flying) && !held && !ko;
+    const walking = e.moving && e.grounded && !held && !air, seed = e.seed || 0;
+    const angry = e.mood === 'angry' || e.mode === 'hunt';
+    const tn = k => tint ? SB.mixColor(k, tint, 0.55) : k, col = r => tn(p.use(r).fill);
+    const body = col('body'), belly = col('belly'), wingC = col('wing'), spikeC = col('spike'), hornC = col('horn'), mouthC = col('mouth'), teethC = col('teeth'), clawC = col('claw');
+    const FX = D.DRG_FX[e.def.drgEl] || D.DRG_FX.fire, emberC = (p.pal && p.pal.ember) || FX.ember, scaleHi = SB.mixColor(body, FX.scale, 0.45);
+    const inh = e.breath > R.breath, firing = (e.breath > 0 && !inh) || e.rainT > 0;
+    const ember = ko ? 0 : inh ? 0.35 + 0.65 * sm01((R.inhale + R.breath - e.breath) / R.inhale) : firing ? 0.95 : 0.2 + 0.08 * Math.sin(t * 2.2 + seed);
+    const dy = P.dy, G = 80 - dy;   // the ground, in the (crouched) body's frame
+    // ---- wing pose: ws = vertical stretch (1 raised high, negative swept down), wr = rotation ----
+    let ws, wr, wx = 1;   // wx < 1: the fingers folded together
+    const fl = t * (e.flyPh === 'up' ? 9 : 5.5) + seed;
+    if (held) { ws = Math.sin(t * 12) * 0.8; wr = -0.3; }
+    else if (ko) { ws = -0.25; wr = -0.9; }
+    else if (e.beatT > 0 && !air) {
+      const u = 1 - e.beatT / R.beat;
+      if (u < 0.5) { const k = sm01(u / 0.5); ws = 0.45 + k * 0.62; wr = -1.25 + k * 1.3; wx = 0.5 + k * 0.5; }
+      else if (u < 0.62) { const k = (u - 0.5) / 0.12; ws = 1.07 - k * 1.9; wr = 0.05 + k * 0.3; }
+      else { const k = sm01((u - 0.62) / 0.38); ws = -0.83 + k * 1.28; wr = 0.35 - k * 1.6; wx = 1 - k * 0.5; }
+    }
+    else if (air) { ws = 0.1 + 0.9 * Math.sin(fl); wr = -0.2 + Math.cos(fl) * 0.12; }
+    else if (e.breath > 0) { ws = 0.75; wr = -0.45; }
+    else if (e.poundT > 0) { ws = 0.85; wr = -0.35; }
+    else if (e.whipT > 0) { ws = 0.55; wr = -0.6; }
+    else { ws = 0.45 + (angry ? 0.05 : 0) + Math.sin(t * 1.1 + seed) * 0.02; wr = -1.25; wx = 0.5; }   // folded along the flanks
+    const wing = (sx, sy, far) => {
+      const k = far ? 0.34 : 0, wc = SB.shade(wingC, k), bone = SB.shade(body, far ? 0.25 : 0), { E, Wr, F, B } = DW;
+      c.save(); c.translate(sx, sy); c.rotate(wr + (far ? 0.06 : 0)); c.scale(wx, ws * (far ? 0.92 : 1));
+      // the membrane: shoulder, leading edge to the wrist, out to each finger tip with scalloped edges between, back to the flank
+      c.beginPath(); c.moveTo(2, 2); c.quadraticCurveTo(16, -38, Wr[0], Wr[1]); c.lineTo(F[0][0], F[0][1]);
+      for (let i = 1; i <= F.length; i++) {
+        const a = F[i - 1], b = i < F.length ? F[i] : B, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, pull = i < F.length ? 0.3 : 0.34;
+        c.quadraticCurveTo(mx + (Wr[0] - mx) * pull, my + (Wr[1] - my) * pull, b[0], b[1]);
+      }
+      c.quadraticCurveTo(-30, 12, 2, 2); c.closePath();
+      const g = c.createRadialGradient(Wr[0], Wr[1], 4, Wr[0] - 50, Wr[1] + 20, 140);
+      g.addColorStop(0, SB.shade(wc, 0.4)); g.addColorStop(0.55, wc); g.addColorStop(1, SB.mixColor(wc, FX.wingRim, far ? 0.08 : 0.32));
+      c.save(); c.globalAlpha *= 0.96; c.fillStyle = g; c.fill(); c.restore();
+      c.strokeStyle = SB.shade(wc, 0.6); c.stroke();
+      // veins and creases fanning out between the fingers
+      c.save(); c.globalAlpha *= 0.45; c.strokeStyle = SB.shade(wc, 0.55); c.lineWidth *= 0.6;
+      for (let i = 0; i < F.length; i++) {
+        const a = F[i], b = i + 1 < F.length ? F[i + 1] : B;
+        for (let j = 1; j <= 2; j++) { const s = j / 3; qpt(Wr[0], Wr[1], (a[0] + Wr[0]) / 2, (a[1] + Wr[1]) / 2, a[0], a[1], 0.55, Q); c.beginPath(); c.moveTo(Q[0], Q[1]); c.quadraticCurveTo((Q[0] + b[0]) / 2 + 6, (Q[1] + b[1]) / 2 + 6, Q[0] + (b[0] - Q[0]) * s * 0.9, Q[1] + (b[1] - Q[1]) * s * 0.9 + 8); c.stroke(); }
+      }
+      c.restore();
+      // bones: upper arm, forearm, and four long fingers with a knuckle each; a hooked thumb claw at the wrist
+      D.cap(p, 0, 0, E[0], E[1], 14, 10, bone); D.cap(p, E[0], E[1], Wr[0], Wr[1], 10, 7, bone);
+      for (let i = 0; i < F.length; i++) {
+        const f = F[i], kx = Wr[0] + (f[0] - Wr[0]) * 0.45 + 4, ky = Wr[1] + (f[1] - Wr[1]) * 0.45 - 3;
+        D.cap(p, Wr[0], Wr[1], kx, ky, 5.5, 4, bone); D.cap(p, kx, ky, f[0], f[1], 4, 1.6, bone);
+        p.poly([f[0] - 2, f[1], f[0] + (f[0] - Wr[0]) * 0.06, f[1] + (f[1] - Wr[1]) * 0.06 - 1, f[0] + 2, f[1] + 1], clawC);
+      }
+      p.poly([Wr[0] - 2, Wr[1] - 3, Wr[0] + 12, Wr[1] - 12, Wr[0] + 7, Wr[1] - 2, Wr[0] + 3, Wr[1] + 4], clawC);
+      c.restore();
+    };
+    // ---- legs: heavy haunches, scaly shins, clawed feet ----
+    const foot = (fx, fy, k, dir) => {
+      const fc = SB.shade(body, k + 0.08);
+      p.ellipse(fx, fy - 4, 9, 5, fc, 0);
+      for (let i = 0; i < 3; i++) {
+        const tx = fx + dir * (9 + i * 3), ty = fy - 6 + i * 2.5;
+        D.cap(p, fx, fy - 4 + i * 1.5, tx, ty, 5.5, 3.6, fc);
+        p.poly([tx - dir * 1, ty - 2.2, tx + dir * 6, ty + 1, tx + dir * 2, ty + 3.5], clawC);   // a hooked black claw
+      }
+      p.poly([fx - dir * 6, fy - 4, fx - dir * 12, fy - 1, fx - dir * 6, fy - 1], clawC);   // the dew claw behind
+    };
+    const hind = (a, far) => {
+      const k = far ? 0.32 : 0, bc = SB.shade(body, k), o = far ? 10 : 0, H = [-46 + o, 4];
+      let Kn, A, F, dir = 1;
+      if (air) { Kn = [-30 + o, 34]; A = [-56 + o, 44]; F = [-74 + o, 50 + Math.sin(t * 3 + o) * 2]; dir = -1; }
+      else if (held) { const s = Math.sin(t * 9 + o) * 6; Kn = [-34 + o, 38]; A = [-50 + o + s, 58]; F = [-44 + o + s, 78]; }
+      else {
+        const sx = walking ? Math.sin(a) * 16 : 0, lift = walking ? Math.max(0, Math.cos(a)) * 10 : 0;
+        F = [-40 + o + sx, G - lift]; Kn = [-28 + o + sx * 0.35, 40 - lift * 0.3 + dy * 0.3]; A = [-50 + o + sx * 0.7, 62 - lift * 0.7 - dy * 0.4];
+      }
+      p.ellipse(H[0] + 2, H[1] + 12, 22, 27, bc, -0.35);   // the haunch
+      D.cap(p, H[0], H[1] + 10, Kn[0], Kn[1], 26, 16, bc);
+      D.cap(p, Kn[0], Kn[1], A[0], A[1], 15, 10, bc);
+      D.cap(p, A[0], A[1], F[0], F[1] - 4, 10, 9, bc);
+      if (!far) { c.save(); c.globalAlpha *= 0.4; p.curve(H[0] - 14, H[1] - 2, H[0] + 6, H[1] - 6, H[0] + 16, H[1] + 18); D.hatch(p, Kn[0], Kn[1] + 4, A[0] + 2, A[1] - 4, 4, 4, 0.3); c.restore(); }
+      foot(F[0], F[1], k, dir);
+    };
+    const front = (a, far) => {
+      const k = far ? 0.32 : 0, bc = SB.shade(body, k), o = far ? 10 : 0, S0 = [34 + o, 6];
+      let E, Wt, F, dir = 1;
+      if (air) { E = [42 + o, 30]; Wt = [56 + o, 40]; F = [68 + o, 38]; }
+      else if (held) { const s = Math.sin(t * 9 + 2 + o) * 6; E = [30 + o, 40]; Wt = [40 + o + s, 60]; F = [44 + o + s, 78]; }
+      else {
+        const sx = walking ? Math.sin(a) * 16 : 0, lift = walking ? Math.max(0, Math.cos(a)) * 11 : 0;
+        E = [26 + o + sx * 0.3, 42 - lift * 0.3 + dy * 0.3]; Wt = [40 + o + sx * 0.8, 66 - lift * 0.7 - dy * 0.4]; F = [46 + o + sx, G - lift];
+        if (P.rear > 0) { const r = P.rear; E = [E[0] + (50 + o - E[0]) * r, E[1] + (26 - E[1]) * r]; Wt = [Wt[0] + (68 + o - Wt[0]) * r, Wt[1] + (28 - Wt[1]) * r]; F = [F[0] + (80 + o - F[0]) * r, F[1] + (22 - F[1]) * r]; }
+      }
+      p.ellipse(S0[0] - 2, S0[1] + 12, 18, 22, bc, 0.3);   // the shoulder
+      D.cap(p, S0[0], S0[1] + 12, E[0], E[1], 22, 14, bc);
+      D.cap(p, E[0], E[1], Wt[0], Wt[1], 13, 9, bc);
+      D.cap(p, Wt[0], Wt[1], F[0], F[1] - 4, 9, 8, bc);
+      if (!far) { c.save(); c.globalAlpha *= 0.4; p.curve(S0[0] - 12, S0[1] + 2, S0[0] - 4, S0[1] + 24, E[0] - 4, E[1] - 4); c.restore(); }
+      foot(F[0], F[1], k, dir);
+    };
+    // ---- tail: a long, heavy, spiked tail ending in a blade of spikes ----
+    let tx0 = -72, ty0 = -2, tcx, tcy, tx1, ty1;
+    const wag = Math.sin(t * 1.5 + seed) * 6;
+    if (e.whipT > 0) {
+      const u = 1 - e.whipT / R.tail;
+      if (u < 0.35) { const k = sm01(u / 0.35); tcx = -126; tcy = -6 - k * 50; tx1 = -168 + k * 34; ty1 = 36 - k * 136; }
+      else if (u < 0.6) { const k = sm01((u - 0.35) / 0.25); tcx = -126 - k * 20; tcy = -56 + k * 50; tx1 = -134 - k * 60; ty1 = -100 + k * 158; }
+      else { const k = sm01((u - 0.6) / 0.4); tcx = -146 + k * 20; tcy = -6; tx1 = -194 + k * 26; ty1 = 58 - k * 22; }
+    }
+    else if (air) { tcx = -130; tcy = 0 + wag * 0.5; tx1 = -186; ty1 = 12 + Math.sin(t * 3 + seed) * 12; }
+    else if (held) { tcx = -100; tcy = 30; tx1 = -108 + wag; ty1 = 78; }
+    else if (ko) { tcx = -120; tcy = 40; tx1 = -160; ty1 = 70; }
+    else { tcx = -128; tcy = -6 + wag * 0.5; tx1 = -168; ty1 = G - 44 + wag * 1.5; }
+    const tail = () => {
+      // spikes along the top first, so their roots hide behind the tail
+      for (let j = 1; j < 11; j++) {
+        const s = j / 11; qpt(tx0, ty0, tcx, tcy, tx1, ty1, s, Q); qpt(tx0, ty0, tcx, tcy, tx1, ty1, s + 0.03, Q2);
+        const ddx = Q2[0] - Q[0], ddy = Q2[1] - Q[1], d = Math.hypot(ddx, ddy) || 1, nx = ddy / d, ny = -ddx / d, r = (30 - 25 * s) / 2, h = 13 - s * 7;
+        const bx = Q[0] + nx * r * 0.8, by = Q[1] + ny * r * 0.8;
+        p.poly([bx - ddx / d * 4, by - ddy / d * 4, bx + nx * h - ddx / d * 3, by + ny * h - ddy / d * 3, bx + ddx / d * 4, by + ddy / d * 4], tn(spikeC));
+      }
+      const mid = D.tube(p, tx0, ty0, tcx, tcy, tx1, ty1, 30, 5, 12, body);
+      c.save(); c.globalAlpha *= 0.35; for (let j = 2; j < mid.length - 1; j++) { const [x, y] = mid[j]; p.arc(x, y, 6 - j * 0.35, 0.4, 2.7); } c.restore();
+      // the tail blade: three spikes fanning from the tip
+      const [ex, ey] = mid[mid.length - 1], [qx, qy] = mid[mid.length - 2], a = Math.atan2(ey - qy, ex - qx);
+      c.save(); c.translate(ex, ey); c.rotate(a);
+      p.poly([-4, -3, 14, -14, 6, -2, 20, 0, 6, 2, 14, 14, -4, 3], tn(spikeC));
+      c.restore();
+    };
+    // ---- the head: horned skull, long jaws full of teeth, glowing slit eye ----
+    const head = () => {
+      const open = P.open, HS = D.DRG_HS, [jx, jy] = D.DRG_JAW;
+      c.save(); c.translate(P.hx, P.hy); c.rotate(P.ha); c.scale(HS, HS);
+      D.tube(p, -2, -14, -28, -30, -46, -56, 8, 2, 8, SB.shade(hornC, 0.35));   // far horn
+      if (open > 0.06) {   // the inside of the mouth, glowing when it is about to breathe fire
+        const co = Math.cos(open), so = Math.sin(open), L = (x, y) => [jx + (x - jx) * co - (y - jy) * so, jy + (x - jx) * so + (y - jy) * co];
+        const [ax, ay] = L(54, 7), [bx, by] = L(20, 9);
+        p.poly([-6, 4, 30, 4, 57, 3, ax, ay, bx, by, -6, 9], mouthC);
+        if (ember > 0.3) { const g = c.createRadialGradient(4, 6, 1, 4, 6, 30); g.addColorStop(0, FX.rgba(0, ember * 0.95)); g.addColorStop(0.5, FX.rgba(3, ember * 0.6)); g.addColorStop(1, FX.rgba(4, 0)); c.fillStyle = g; c.beginPath(); c.moveTo(-6, 4); c.lineTo(57, 3); c.lineTo(ax, ay); c.lineTo(bx, by); c.closePath(); c.fill(); }
+      }
+      // lower jaw on its hinge, teeth pointing up
+      c.save(); c.translate(jx, jy); c.rotate(open); c.translate(-jx, -jy);
+      for (let x = 8; x <= 50; x += 6) p.poly([x - 1.6, 5.5, x, x === 44 ? -2 : 1, x + 1.6, 5.5], teethC);
+      p.poly([-14, 3, 4, 5, 24, 5, 42, 5, 54, 6, 56, 9, 46, 12, 28, 14, 8, 14, -10, 11], body);
+      p.use('spike'); for (let i = 0; i < 3; i++) p.poly([-4 + i * 9, 12.5, -8 + i * 9, 19 - i, -1 + i * 9, 13], tn(spikeC));   // spines under the chin
+      c.restore();
+      // upper teeth, with long fangs
+      for (let x = 6; x <= 54; x += 5.5) { const fang = x > 40 && x < 47; p.poly([x - 1.8, 3.5, x + 0.4, fang ? 12 : 8.5, x + 1.8, 3.5], teethC); }
+      // the skull and upper jaw
+      p.poly([-16, -4, -12, -13, 0, -17, 14, -15, 28, -10, 42, -7, 52, -5, 58, -2, 59, 2, 50, 4, 32, 4, 14, 4, -2, 4, -14, 4], body);
+      c.save(); c.globalAlpha *= 0.4; for (let i = 0; i < 5; i++) p.arc(20 + i * 6, -3 + i * 0.5, 2.4, Math.PI + 0.4, TAU - 0.4); p.curve(0, 0, 18, -2, 40, -1); c.restore();
+      p.poly([2, -15, 14, -18, 28, -12, 22, -8, 8, -10], SB.shade(body, 0.3));   // heavy brow ridge
+      if (!ko && e.mood !== 'sleep') { const g = c.createRadialGradient(14, -8, 1, 14, -8, 12); g.addColorStop(0, FX.rgba(2, 0.55)); g.addColorStop(1, FX.rgba(4, 0)); c.fillStyle = g; c.beginPath(); c.arc(14, -8, 12, 0, TAU); c.fill(); }
+      D.eye(p, 14, -8, 3.6, e, 1);
+      p.dot(55, -3, 1.3);   // nostril
+      // horns: two great swept-back horns, a cheek horn and a frill of spikes along the jaw
+      D.tube(p, -6, -12, -34, -20, -58, -44, 10, 2.2, 9, hornC);
+      c.save(); c.globalAlpha *= 0.4; for (let i = 1; i < 5; i++) { qpt(-6, -12, -34, -20, -58, -44, i / 6, Q); p.line(Q[0] - 3, Q[1] - 3, Q[0] + 2, Q[1] + 4); } c.restore();
+      D.tube(p, -10, -2, -26, 2, -40, -4, 6, 1.5, 6, hornC);
+      p.poly([-14, 0, -24, 10, -12, 6, -18, 16, -6, 6], tn(spikeC));
+      c.save(); c.strokeStyle = FX.scar; p.line(24, -10, 34, -2); p.line(28, -11, 36, -6); c.restore();   // old scars
+      c.restore();
+    };
+    // ---- the fire: a long roaring cone from the mouth ----
+    const fire = () => {
+      const [mx, my, a] = D.dragonMouth(e, t), L = Math.max(30, e.fireLen || R.reach), y0 = my - P.dy;   // dragonMouth includes the crouch, the body frame here already has it
+      c.save(); c.translate(mx, y0);
+      if (P.rear) { /* never breathes while reared up */ }
+      c.rotate(a);
+      const lay = (wEnd, len, stops, s0) => {
+        const g = c.createLinearGradient(0, 0, len, 0); for (const [u, cl] of stops) g.addColorStop(u, cl); c.fillStyle = g;
+        c.beginPath(); c.moveTo(0, -2.5);
+        for (let i = 1; i <= 8; i++) { const u = i / 8, w = 2.5 + (wEnd - 2.5) * Math.pow(u, 0.75); c.lineTo(u * len, -w + Math.sin(t * 23 + i * 1.9 + s0) * w * 0.2); }
+        c.quadraticCurveTo(len + wEnd * 0.7, 0, len, wEnd);
+        for (let i = 8; i >= 1; i--) { const u = i / 8, w = 2.5 + (wEnd - 2.5) * Math.pow(u, 0.75); c.lineTo(u * len, w + Math.sin(t * 19 + i * 2.3 + s0) * w * 0.2); }
+        c.lineTo(0, 2.5); c.closePath(); c.fill();
+      };
+      const fk = 1 + Math.sin(t * 17 + seed) * 0.06;
+      lay(L * 0.3 * fk, L, [[0, FX.rgba(1, 0.9)], [0.22, FX.rgba(2, 0.85)], [0.7, FX.rgba(5, 0.6)], [1, FX.rgba(6, 0)]], seed);
+      lay(L * 0.17, L * 0.82, [[0, FX.rgba(7, 0.95)], [0.4, FX.rgba(0, 0.8)], [1, FX.rgba(3, 0)]], seed + 3);
+      lay(L * 0.06, L * 0.45, [[0, FX.rgba(8, 0.95)], [1, FX.rgba(1, 0)]], seed + 7);
+      for (let i = 0; i < 6; i++) {   // billows of flame rolling along the cone
+        const u = 0.3 + ((i / 6 + t * 1.7 + seed * 0.1) % 1) * 0.7, w = L * 0.3 * Math.pow(u, 0.75), x = u * L, y = Math.sin(t * 9 + i * 2.1) * w * 0.3, a = (1 - u) * 0.75 + 0.1;
+        const g = c.createRadialGradient(x, y, 0, x, y, w * 0.9); g.addColorStop(0, FX.rgba(0, a)); g.addColorStop(0.6, FX.rgba(3, a * 0.6)); g.addColorStop(1, FX.rgba(6, 0));
+        c.fillStyle = g; c.beginPath(); c.arc(x, y, w * 0.9, 0, TAU); c.fill();
+      }
+      c.restore();
+    };
+    // ---- paint, back to front ----
+    c.save();
+    if (dy) c.translate(0, dy);
+    if (P.rear) { const [px, py] = D.DRG_PIVOT; c.translate(px, py); c.rotate(-0.32 * P.rear); c.translate(-px, -py); }
+    const ph = e.phase || 0;
+    wing(30, -32, true);
+    tail();
+    hind(ph + Math.PI, true); front(ph, true);
+    // spines down the back, behind the body's outline
+    const back = [-70, -14, -46, -30, -20, -27, 6, -28, 28, -35, 50, -28];
+    for (let k = 0; k < 9; k++) {
+      const s = k / 8 * 4.999, i = Math.floor(s), f = s - i, x = back[i * 2] + (back[i * 2 + 2] - back[i * 2]) * f, y = back[i * 2 + 1] + (back[i * 2 + 3] - back[i * 2 + 1]) * f;
+      const h = 12 + Math.sin(k / 8 * Math.PI) * 9;
+      p.poly([x - 6, y + 4, x - 4, y - h, x + 1, y - h * 0.55, x + 6, y + 4], tn(spikeC));
+    }
+    // the neck (rising from behind the chest): spines on its crest, plates under the throat
+    const nx0 = 48, ny0 = 0, nx1 = P.hx - 9, ny1 = P.hy + 2, ncx = nx0 + (P.hx - nx0) * 0.3, ncy = Math.min(ny0, P.hy) + 2;
+    for (let j = 1; j < 7; j++) {
+      const s = j / 7; qpt(nx0, ny0, ncx, ncy, nx1, ny1, s, Q); qpt(nx0, ny0, ncx, ncy, nx1, ny1, s + 0.04, Q2);
+      const ddx = Q2[0] - Q[0], ddy = Q2[1] - Q[1], d = Math.hypot(ddx, ddy) || 1, nx = ddy / d, ny = -ddx / d, r = (42 - 23 * s) / 2 * 0.8, h = 11 - s * 3;
+      p.poly([Q[0] + nx * r - ddx / d * 4, Q[1] + ny * r - ddy / d * 4, Q[0] + nx * (r + h) - ddx / d * 5, Q[1] + ny * (r + h) - ddy / d * 5, Q[0] + nx * r + ddx / d * 4, Q[1] + ny * r + ddy / d * 4], tn(spikeC));
+    }
+    const nm = D.tube(p, nx0, ny0, ncx, ncy, nx1, ny1, 42, 19, 10, body);
+    p.circle(nx1, ny1, 9.5, body);   // rounds off the top of the neck under the skull
+    c.save(); c.globalAlpha *= 0.4; for (let j = 2; j < nm.length - 1; j++) { const [x, y] = nm[j]; p.arc(x - 3, y, 5.5 - j * 0.25, Math.PI * 0.9, Math.PI * 1.6); } c.restore();
+    c.save();
+    for (let j = 1; j < nm.length - 1; j++) {   // throat plates, glowing when the fire rises
+      const [x, y] = nm[j], [x2, y2] = nm[j + 1], ddx = x2 - x, ddy = y2 - y, d = Math.hypot(ddx, ddy) || 1, nx = -ddy / d, ny = ddx / d, r = (42 - 23 * j / 10) / 2;
+      c.globalAlpha = ember > 0.3 ? Math.min(1, ember) : 0.45; c.strokeStyle = ember > 0.3 ? SB.mixColor(emberC, FX.seam, 0.4) : SB.shade(belly, 0.5);
+      p.line(x + nx * r * 0.2, y + ny * r * 0.2, x + nx * r * 0.95, y + ny * r * 0.95);
+    }
+    c.restore();
+    // the body: deep chest, heavy belly, powerful hips
+    p.poly([-80, -6, -64, -22, -44, -30, -20, -26, 4, -27, 26, -34, 46, -30, 60, -16, 64, -2, 60, 20, 46, 36, 20, 40, -10, 40, -40, 34, -62, 22, -78, 10], body);
+    p.poly([60, 6, 62, 18, 48, 34, 20, 39, -10, 39, -40, 33, -62, 21, -72, 12, -52, 15, -22, 23, 8, 26, 38, 20], belly);   // armoured belly plates
+    c.save();
+    if (ember > 0.05) {   // the fire inside glows through the seams of the belly
+      c.strokeStyle = SB.mixColor(emberC, FX.seam, ember * 0.5); c.globalAlpha *= Math.min(1, ember * 1.1); c.lineWidth *= 1.2; c.shadowColor = emberC; c.shadowBlur = 6 * ember;
+      for (let k = 0; k < 9; k++) { const x = 52 - k * 13; p.curve(x, 22 - (k > 5 ? k - 5 : 0) * 2, x - 2, 30, x - 4, 38 - Math.abs(k - 3) * 1.2); }
+    } else { c.globalAlpha *= 0.5; for (let k = 0; k < 9; k++) { const x = 52 - k * 13; p.curve(x, 22, x - 2, 30, x - 4, 38 - Math.abs(k - 3) * 1.2); } }
+    c.restore();
+    if (ember > 0.25) { const g = c.createRadialGradient(46, 14, 2, 46, 14, 34); g.addColorStop(0, FX.rgba(2, ember * 0.45)); g.addColorStop(1, FX.rgba(4, 0)); c.save(); c.fillStyle = g; c.beginPath(); c.arc(46, 14, 34, 0, TAU); c.fill(); c.restore(); }
+    // armoured scales: overlapping rows, each with a dull red rim catching the light
+    c.save();
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 10; k++) {
+      const x = -64 + k * 13 + (r % 2) * 6.5, y = -18 + r * 10;
+      if (((x - 2) / 66) ** 2 + ((y - 4) / 30) ** 2 > 0.85) continue;
+      c.globalAlpha = 0.5; c.strokeStyle = SB.shade(body, 0.55); p.arc(x, y, 5.5, Math.PI + 0.25, TAU - 0.25);
+      c.globalAlpha = 0.3; c.strokeStyle = scaleHi; p.arc(x, y - 1.2, 4.5, Math.PI + 0.6, TAU - 0.9);
+    }
+    c.restore();
+    c.save(); c.globalAlpha *= 0.4; p.curve(24, -26, 50, 0, 30, 30); p.arc(-46, 8, 26, -2.2, 0.4); p.curve(-14, -22, -4, 8, -16, 36); c.restore();   // shoulder, haunch, ribs
+    hind(ph, false); front(ph + Math.PI, false);
+    wing(20, -30, false);
+    head();
+    if (firing) fire();
+    c.restore();
+    p.use('body');
+  };
+
   // ---------- stinger (what the giant scorpion fires; you can type it too) ----------
   SB.def('stinger', {
     cat: 'item', aliases: ['scorpion stinger', 'stingers', 'poison spine', 'poison barb', 'poison dart'], tags: ['item', 'poison', 'sharp'],
@@ -1265,7 +1796,41 @@
     hint: 'The praying mantis hides in plain sight, then strikes! Weak to birds and cold.',
     onHurt(e, W) { if (Math.random() < 0.35) e.say('SKREE!'); }
   });
-  SB.BOSSES = ['kraken', 'mega robot', 'king kong', 'hydra', 'lava golem', 'giant spider', 'giant moth', 'ice golem', 'giant snake', 'giant angry bull', 'giant scorpion', 'wasp swarm', 'beetle swarm', 'giant praying mantis'];
+  B('phoenix', {
+    drawK: 1.4,
+    t: D.phoenix(), aliases: ['phoenix boss', 'fire bird', 'firebird', 'giant phoenix', 'flame bird', 'flaming bird', 'burning bird', 'sun bird', 'sunbird', 'fenix', 'pheonix', 'phenix', 'phoneix', 'phoenix bird', 'pheonix bird', 'fire phoenix', 'flame phoenix', 'the phoenix', 'firebird boss', 'fire hawk', 'fire eagle', 'flame eagle', 'fawkes', 'phoenixes'],
+    move: 'fly', speed: 165, mass: 55, hp: 42, jump: 300, flyMin: 0.06, flyMax: 0.4, tags: ['fire', 'hot', 'bird', 'winged', 'light'], weak: ['water', 'rain', 'ice', 'snow', 'cold'], special: 'phoenix', fireproof: true, roarSfx: 'screech',
+    hunts: ['human', 'hero', 'animal', 'monster', 'vehicle', 'snowman'], eats: [],
+    say: ['*crackle*', 'From the ashes I rise...', '*the air shimmers with heat*', 'Burn bright. Burn forever.'], roar: ['SKREEEEEE!', '*FWOOOSH*', 'BURN!', 'KREEEAAAH!'],
+    weakSay: ['HSSSS! Water!', 'My flames! NO!', 'Too c-c-cold!', '*sizzle* Not the rain!'],
+    power: 'Rules the sky. Swoops down in blazing dives that set everything it touches alight and leave a trail of fire on the ground, and beats its wings to hurl fireballs from its beak. Knock it out and it bursts into a pillar of flame and is REBORN from an egg in the ashes with half its health: you have to beat it twice!', weakText: 'water, rain, snow, ice and anything cold (a rain cloud over it puts its fire out)',
+    hint: 'The phoenix dives in fire and is reborn from its ashes: beat it twice! Weak to water and rain.',
+    onHurt(e, W) { W.burst('flame', e.x, e.y, 5, 140, { size: 7, life: 0.5, vy: -80 }); if (Math.random() < 0.4) e.say(pick(['SKREE!', 'KRAAH!'])); }
+  });
+  B('giant dragon', {
+    drawK: 1.4,
+    t: D.dragonBoss(), aliases: ['dragon boss', 'boss dragon', 'huge dragon', 'mega dragon', 'dragon king', 'king dragon', 'elder dragon', 'black dragon', 'red dragon boss', 'black dragon boss', 'colossal dragon', 'ancient dragon', 'great dragon', 'enormous dragon', 'gigantic dragon', 'massive dragon', 'titan dragon', 'dragon lord', 'dragon queen', 'monster dragon', 'giant fire dragon', 'giant black dragon', 'giant red dragon', 'ancient black dragon', 'smaug', 'dragn boss', 'dragon bos', 'dargon boss', 'dragen boss', 'drago boss', 'dragon boos', 'giant dragn', 'giant dargon', 'giant dragen', 'gaint dragon'],
+    speed: 85, mass: 110, hp: 50, jump: 420, flyMin: 0.06, flyMax: 0.4, tags: ['dragon', 'reptile', 'scaly', 'fire', 'winged', 'scary'], weak: ['ice', 'cold', 'snow', 'knight', 'sword'], special: 'dragonboss', drgEl: 'fire', fireproof: true, kin: ['drake', 'fire'], roarSfx: 'roar',   // kin: the ordinary dragon and fire things, but not the ice dragon
+    hunts: ['knight', 'princess', 'human', 'hero', 'ice', 'frost', 'animal', 'monster', 'vehicle'], eats: ['sheep', 'cow', 'pig', 'goat', 'deer', 'horse', 'chicken'],
+    say: ['*smoke curls from its nostrils*', 'I am older than your kingdoms.', '*a deep, rumbling growl*', 'Bring me gold. And knights.', 'Mmm. Roast knight.'], roar: ['ROOOAAARRR!', '*FWOOOOSH*', 'BURN!', 'GRAAAAH!'],
+    weakSay: ['ARGH! My weakness!', 'Not the cold! NOT THE COLD!', 'Brrr! My fire... it\'s freezing!', 'Curse you!'],
+    power: 'A huge ancient dragon that rules the ground and the sky. Sweeps a long cone of fire from its jaws that sets everything alight, whips its spiked tail at anything behind it, rears up and beats its wings into a gale, and takes off to rain fire from above before crashing back down with a ground-shaking stomp. Fireproof, and anything that touches it burns.', weakText: 'ice, snow and anything cold (it stuns it), and knights and swords (dragon slayers!)',
+    hint: 'The giant dragon breathes fire, whips its tail and rains fire from the sky! Weak to ice, cold and knights.',
+    onHurt(e, W) { W.burst('spark', e.x, e.y, 4, 120, { size: 5 }); if (Math.random() < 0.35) e.say(pick(['GRAAH!', 'RRRAAH!', '*SNARL*'])); }
+  });
+  // the same great beast, born of the frozen north: the same drawing, model and attacks with frost for fire (def.drgEl)
+  B('ice dragon', {
+    drawK: 1.4,
+    t: D.dragonBoss(), aliases: ['frost dragon', 'ice dragon boss', 'frost dragon boss', 'snow dragon', 'frost wyrm', 'ice wyrm', 'blizzard dragon', 'glacier dragon', 'giant ice dragon', 'giant frost dragon', 'giant snow dragon', 'white dragon', 'ice wyvern', 'frost wyvern', 'winter dragon', 'freezing dragon', 'frozen dragon', 'crystal dragon', 'arctic dragon', 'cold dragon', 'blue dragon', 'ice dragon king', 'dragon of ice', 'ice dragn', 'ice dargon', 'ice dragen', 'ice drago', 'frost dragn', 'ice dragons', 'iced dragon'],
+    speed: 85, mass: 110, hp: 50, jump: 420, flyMin: 0.06, flyMax: 0.4, tags: ['dragon', 'reptile', 'scaly', 'ice', 'cold', 'frost', 'winged', 'scary'], weak: ['fire', 'hot', 'lava'], special: 'dragonboss', drgEl: 'ice', frost: true, kin: ['frost'], roarSfx: 'roar',
+    hunts: ['fire', 'hot', 'dragon', 'knight', 'princess', 'human', 'hero', 'animal', 'monster', 'vehicle'], eats: ['sheep', 'cow', 'pig', 'goat', 'deer', 'horse', 'chicken', 'fish', 'penguin', 'seal'],
+    say: ['*frost curls from its nostrils*', 'Winter never ends.', '*ice creaks along its back*', 'Everything freezes in the end.', 'Your fire means nothing here.'], roar: ['SKRAAAAAH!', '*KSSHHHH*', 'FREEZE!', 'GRAAAAH!'],
+    weakSay: ['ARGH! It burns!', 'Not the fire! NOT THE FIRE!', 'I\'m... melting!', 'Hot! HOT!'],
+    power: 'The fire dragon\'s frozen twin, a huge ancient dragon of ice. Sweeps a freezing breath from its jaws that freezes everything solid, whips its crystal-spiked tail at anything behind it, rears up and beats its wings into a gale, and takes off to rain icicles from above before crashing back down with a stomp that shatters everything frozen. Cold can\'t touch it, and it snuffs out fires.', weakText: 'fire, lava and anything hot (it stuns it) — and the fire dragon is its worst enemy',
+    hint: 'The ice dragon freezes everything with its breath and rains icicles from the sky! Weak to fire and heat.',
+    onHurt(e, W) { W.burst('shard', e.x, e.y, 5, 180, { size: 5, g: 900, life: 0.7 }); if (Math.random() < 0.35) e.say(pick(['GRAAH!', 'SKRAAH!', '*SNARL*'])); }
+  });
+  SB.BOSSES = ['kraken', 'mega robot', 'king kong', 'hydra', 'lava golem', 'giant spider', 'giant moth', 'ice golem', 'giant snake', 'giant angry bull', 'giant scorpion', 'wasp swarm', 'beetle swarm', 'giant praying mantis', 'phoenix', 'giant dragon', 'ice dragon'];
   SB.WORDS.boss = SB.WORDS.bosses = 'kraken'; // typing "boss" summons a random one (see SB.findWord)
 
   // ---------- boss attacks (run every frame by the game loop via SB.SPECIALS) ----------
@@ -1923,4 +2488,452 @@
     f.vx = clamp((ax - hx) / T, -900, 900); f.vy = (ay - hy) / T - 0.5 * g * T; f.grounded = false;
     W.shake(3); W.sfx('whoosh', e.x); W.sfx('fire', e.x, 0.6); e.say('*FWOOM*'); W.burst('spark', hx, hy, 6, 120, { size: 5 });
   }
+
+  // phoenix: rules the sky. Fiery dives that leave the ground burning, wing-beats that hurl fireballs from its
+  // beak, and REBIRTH: the first knock-out turns it to flame and ash, and it hatches again with half its health.
+  const phxTrail = [];   // fires its dives leave on the ground: [fire, when it burns out]
+  S.phoenix = function (e, dt, W) {
+    phoenixHooks(W);
+    for (let i = phxTrail.length - 1; i >= 0; i--) { const [f, until] = phxTrail[i]; if (!f.alive || f.dying || W.time > until) { if (f.alive && !f.dying) W.remove(f, 'poof'); phxTrail.splice(i, 1); } }
+    if (e.rebirthT > 0) { rebirthTick(e, dt, W); return; }
+    e.pitch = e.pitch || 0;
+    if (e.ko) { e.pitch *= 0.9; return; }
+    const K = ks(e);
+    e.specT -= dt;
+    if (Math.random() < dt * 9) W.particle('flame', e.x - e.facing * (50 + Math.random() * 70) * K, e.y + Math.random() * 30 * K, { vx: -e.facing * 50, vy: -70, life: 0.45, size: 5 + Math.random() * 6 });
+    if (Math.random() < dt * 5) W.particle('spark', e.x + (Math.random() - 0.5) * e.w * 0.7, e.y + (Math.random() - 0.5) * e.h * 0.4, { vy: -70, life: 0.6, size: 3 });
+    if (e.diveT > 0) { diveTick(e, dt, W); return; }
+    if (e.throwT > 0) {   // rearing back on beating wings, then the fireballs
+      const was = e.throwT; e.throwT -= dt; e.pitch += (-0.15 - e.pitch) * Math.min(1, dt * 6);
+      if (was > 0.32 && e.throwT <= 0.32) phoenixVolley(e, W);
+      return;
+    }
+    e.pitch += (0 - e.pitch) * Math.min(1, dt * 4);
+    if (!ready(e)) return;
+    const tg = e.target;
+    if (!(tg && tg.alive && !tg.dying && !tg.ko)) { if (e.specT <= 0) e.specT = 0.3; return; }
+    const dx = tg.x - e.x, dy = tg.y - e.y;
+    // circle high above and off to one side of its prey, out of reach of swords
+    if (e.flying && !e.controlled) {
+      const hy = clamp(tg.top - 170 * e.scale - e.h * 0.3, W.groundY * 0.08 + e.h / 2, W.groundY - e.h / 2 - 40);
+      const hx = tg.x + (dx >= 0 ? -1 : 1) * 230 * e.scale, k = Math.min(1, dt * 6);
+      e.vy += (clamp((hy - e.y) * 2.5, -420, 420) - e.vy) * k;
+      e.vx += (clamp((hx - e.x) * 2, -260, 260) - e.vx) * k * 0.6;
+    }
+    if (e.specT > 0) return;
+    const d = Math.hypot(dx, dy);
+    if (e.flying && dy > 80 * e.scale && Math.abs(dx) < 700 * e.scale && (e.lastAtk !== 'dive' || Math.random() < 0.35)) phoenixDive(e, tg, W);
+    else if (d < 780 * e.scale && Math.abs(dx) > 40) {
+      e.throwT = 0.8; e.specT = 3.2; e.aim = tg; e.facing = dx >= 0 ? 1 : -1; e.lastAtk = 'volley';
+      W.sfx('screech', e.x, 0.6); W.sfx('wind', e.x, 0.5); e.say(pick(['*WINGS OF FIRE*', 'BURN!', 'KREEEAAAH!']));
+    } else e.specT = 0.4;
+  };
+  function phoenixDive(e, tg, W) {
+    e.facing = tg.x >= e.x ? 1 : -1;
+    const ax = tg.x + tg.vx * 0.25, ay = Math.min(W.groundY - e.h * 0.3, tg.y), dx = ax - e.x, dy = ay - e.y, d = Math.hypot(dx, dy) || 1;
+    const V = 950 * Math.sqrt(e.scale);
+    e.diveVx = dx / d * V; e.diveVy = dy / d * V; e.diveDown = d / V + 0.08; e.diveT = 3; e.divePh = 'down';
+    e.diveId = (e.diveId || 0) + 1; e.diveFires = 0; e.diveLastX = -1e9; e.specT = 3.6; e.lastAtk = 'dive';
+    W.sfx('screech', e.x); W.sfx('whoosh', e.x); W.shake(4);
+    e.say(pick(['SKREEEEEE!', '*DIVES*', 'FROM ABOVE!', 'FEEL THE SUN!']));
+  }
+  function diveTick(e, dt, W) {
+    const K = ks(e), sq = Math.sqrt(e.scale);
+    e.diveT -= dt;
+    if (e.divePh === 'down') {
+      e.vx = e.diveVx || 0; e.vy = e.diveVy || 0; e.diveDown -= dt;
+      if (e.diveDown <= 0 || e.bottom >= W.groundY - 6) { e.divePh = 'up'; e.upT = 0.8; W.sfx('whoosh', e.x); W.sfx('fire', e.x, 0.7); }
+    } else {
+      e.upT -= dt; e.vx = e.facing * 720 * sq; e.vy = -620 * sq * Math.min(1, e.upT * 2 + 0.3);
+      if (e.upT <= 0) { e.diveT = 0; e.vx *= 0.4; e.vy *= 0.4; }
+    }
+    if (e.diveT <= 0) e.diveT = 0;
+    const wp = clamp(Math.atan2(e.vy, Math.abs(e.vx)), -0.6, 1.0);
+    e.pitch += (wp - e.pitch) * Math.min(1, dt * 10);
+    // everything the burning bird touches catches fire and gets bowled aside
+    const hx = e.x + e.facing * 30 * K, hy = e.y + 12 * K, R = 62 * K;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || o.held || SB.kin(e, o) || o.special === 'fireball' || o.special === 'fire') continue;
+      if (Math.abs(o.x - hx) > R + o.w * 0.45 || Math.abs(o.y - hy) > R + o.h * 0.45) continue;
+      W.burn(o, e, dt);
+      if (o.creature && !o.ko && o.diveHit !== e.diveId) {
+        o.diveHit = e.diveId; W.hurt(o, 3, e, { quiet: true });
+        if (!o.static) { o.vx = e.facing * 420 * Math.min(1.5, 4 / Math.sqrt(o.mass)); o.vy = -380; o.grounded = false; }
+        o.say(pick(['AAAH! FIRE!', 'Yeow!', 'Hot hot hot!', 'Duck!'])); W.popText(o.x, o.top - 20, 'SCORCH!', 22); W.shake(5);
+      }
+    }
+    // skimming the ground: set it ablaze
+    if (e.bottom > W.groundY - 60 * e.scale && e.diveFires < 4 && Math.abs(e.x - e.diveLastX) > 75 * e.scale) {
+      const f = W.spawn('fire', e.x - e.facing * 20 * K, W.groundY - 20, { quiet: true, scale: 0.8 + Math.random() * 0.3 });
+      if (f) { f.spawnT = 0.6; phxTrail.push([f, W.time + 5 + Math.random() * 2]); e.diveFires++; e.diveLastX = e.x; W.sfx('fire', e.x, 0.5); }
+    }
+    for (let k = 0; k < 2; k++) W.particle('flame', e.x - e.facing * (Math.random() * 60) * K, e.y + (Math.random() - 0.3) * 40 * K, { vx: -e.vx * 0.25 + (Math.random() - 0.5) * 60, vy: -e.vy * 0.25 - 40, life: 0.5, size: 9 + Math.random() * 10 * e.scale });
+    if (Math.random() < dt * 30) W.particle('streak', e.x, e.y, { tx: e.vx, ty: e.vy, life: 0.2, size: 50 });
+  }
+  // a beat of the wings: three fireballs from the beak, fanned around the target
+  function phoenixVolley(e, W) {
+    const tg = e.aim; e.aim = null;
+    const K = ks(e), pc = Math.cos(e.pitch || 0), ps = Math.sin(e.pitch || 0), [mx, my] = D.phoenixBeak;   // the beak, turned with the bird's pitch
+    const bx = e.x + e.facing * (mx * pc - my * ps) * K, by = e.y + (mx * ps + my * pc) * K;
+    const live = tg && tg.alive && !tg.dying;
+    const tx = live ? tg.x + tg.vx * 0.5 : e.x + e.facing * 300, ty = live ? Math.min(W.groundY - tg.h / 2, tg.y) : W.groundY - 20;
+    for (let i = -1; i <= 1; i++) {
+      const f = W.spawn('fireball', bx, by, { scale: Math.max(0.6, e.scale * 0.9), quiet: true }); if (!f) continue;
+      f.owner = e; f.x = bx; f.y = by;
+      const T = 0.7 + Math.abs(i) * 0.12, g = 1700 * f.gravity, ax = tx + i * 95 * e.scale;
+      f.vx = clamp((ax - bx) / T, -1000, 1000); f.vy = (ty - by) / T - 0.5 * g * T; f.grounded = false;
+    }
+    W.shake(4); W.sfx('fire', e.x); W.sfx('whoosh', e.x); W.burst('flame', bx, by, 8, 160, { size: 8, life: 0.4 }); W.burst('spark', bx, by, 6, 140, { size: 5 });
+    e.say(pick(['*FWOOM*', 'BURN!', 'SKREEE!']));
+  }
+  // first knock-out: it bursts into a pillar of flame instead (the K.O. and the mess come the second time)
+  function phoenixBurst(e, by, W) {
+    e.reborn = true; e.ko = true; e.hp = 0; e.target = e.threat = e.victim = null; e.dizzy = 0; e.sleeping = false; e.thrust = 0;
+    e.koAngle = 0; e.diveT = e.throwT = 0; e.poisonT = 0; e.onFire = 0; e.webT = 0; e.pitch = 0;
+    e.rebirthT = D.PHX_REBIRTH; e.vy = Math.min(e.vy, -150); e.grounded = false;
+    W.sfx('screech', e.x); W.sfx('fire', e.x); W.sfx('boom', e.x, 0.6); W.flash = 0.3; W.shake(10);
+    W.burst('flame', e.x, e.y, 26, 320, { size: 13, life: 0.7 }); W.burst('spark', e.x, e.y, 12, 260, { size: 6 });
+    W.particle('impact', e.x, e.top - 24, { life: 1.0, size: 58, text: 'K.O.?' });
+    e.say(pick(['I... will... RISE!', 'This is not the end!', 'From the ashes...']));
+    if (by && by.creature && by.alive) { by.say(pick(['We did it!', 'Victory!', 'Is it over?'])); by.setMood('happy', 2); }
+  }
+  function rebirthTick(e, dt, W) {
+    if (!e.ko) { e.rebirthT = 0; return; }   // brought back some other way
+    const R = D.PHX_REBIRTH, u0 = 1 - e.rebirthT / R;
+    e.rebirthT -= dt;
+    const u = 1 - Math.max(0, e.rebirthT) / R, K = ks(e), gy = e.bottom;
+    e.angle = 0; e.angVel = 0; e.koAngle = 0;
+    if (u < 0.3 || u >= 0.78) { if (Math.random() < dt * 50) W.particle('flame', e.x + (Math.random() - 0.5) * 60 * K, gy - Math.random() * 60 * K, { vx: (Math.random() - 0.5) * 40, vy: -300 - Math.random() * 250, life: 0.6, size: 10 + Math.random() * 14 }); }
+    else { if (Math.random() < dt * 5) W.particle('smoke', e.x + (Math.random() - 0.5) * 50 * K, gy - 20 * K, { vy: -40, life: 1.2, size: 8 }); if (Math.random() < dt * 6) W.particle('spark', e.x + (Math.random() - 0.5) * 40 * K, gy - 25 * K, { vy: -80, life: 0.6, size: 3 }); }
+    if (u0 < 0.6 && u >= 0.6) { W.sfx('fire', e.x, 0.5); e.say('*crack... crack...*'); }
+    if (u0 < 0.78 && u >= 0.78) {   // the egg bursts
+      W.sfx('boom', e.x, 0.7); W.sfx('screech', e.x); W.flash = 0.35; W.shake(12);
+      W.burst('flame', e.x, gy - 30 * K, 30, 360, { size: 12, life: 0.7 }); W.burst('spark', e.x, gy - 30 * K, 14, 300, { size: 6 });
+      W.popText(e.x, e.top - 40, 'REBIRTH!', 40);
+    }
+    if (e.rebirthT <= 0) phoenixReborn(e, W);
+  }
+  function phoenixReborn(e, W) {
+    e.rebirthT = 0; e.ko = false; e.hp = Math.ceil(e.hpMax / 2); e.lastHp = e.hp; e.angle = 0; e.dizzy = 0; e.spawnT = 1;
+    e.y = Math.min(e.y, W.groundY - e.h / 2); e.vy = -650; e.grounded = false; e.specT = 1.2; e.lastAtk = 'dive';
+    e.setMood('angry', 3); e.say(pick(['I RISE AGAIN!', 'REBORN IN FIRE!', 'You cannot kill a phoenix!']));
+    W.sfx('screech', e.x); W.sfx('fire', e.x); W.sfx('heal', e.x);
+    W.particle('ring', e.x, e.bottom, { life: 0.5, size: 260 * e.scale }); W.burst('sparkle', e.x, e.y, 10, 160, { size: 6, life: 0.8 });
+    // a ring of fire blasts out from the nest
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || o.static || o.held || SB.kin(e, o)) continue;
+      const dx = o.x - e.x, d = Math.hypot(dx, o.y - e.y);
+      if (d > 240 * e.scale) continue;
+      W.burn(o, e, 0.1); o.vx += (dx < 0 ? -1 : 1) * 380; o.vy = Math.min(o.vy, -300); o.grounded = false;
+      if (o.creature) { W.hurt(o, 2, e, { quiet: true }); o.say(pick(['It\'s BACK!', 'No way!', 'AAAH!'])); }
+    }
+  }
+  // hooks into the world (installed once): rebirth on the first knock-out, a click hurries the rebirth along,
+  // and in control mode E fires its special
+  function phoenixHooks(W) {
+    if (!W || W.phoenixHooked || !W.knockOut) return;
+    W.phoenixHooked = true;
+    const ko = W.knockOut, revive = W.revive, ctrlSpecial = W.ctrlSpecial;
+    W.knockOut = function (e, by) {
+      if (e.special === 'phoenix' && !e.ko && e.alive && !e.dying) {
+        if (!e.reborn) { phoenixBurst(e, by, W); return; }
+        e.diveT = 0; e.pitch = 0;
+        ko.call(W, e, by);
+        W.burst('smoke', e.x, e.y, 12, 80, { size: 12, life: 1.4 });
+        return;
+      }
+      return ko.call(W, e, by);
+    };
+    if (revive) W.revive = function (e) { if (e.rebirthT > 0) { e.rebirthT = Math.min(e.rebirthT, 0.4); return; } return revive.call(W, e); };
+    if (ctrlSpecial) W.ctrlSpecial = function () {
+      const e = W.ctrl && W.ctrl.e;
+      if (!e || e.special !== 'phoenix') return ctrlSpecial.call(W);
+      if (e.ko || e.dying || W.ctrl.atkCd > 0) return;
+      W.ctrl.atkCd = 0.6;
+      let best = null, bd = Infinity;
+      for (const o of W.entities) {
+        if (o === e || !o.alive || o.dying || !o.creature || o.ko || o.held) continue;
+        const dx = (o.x - e.x) * e.facing; if (dx < -o.w * 0.3 || dx > 900) continue;
+        const dd = Math.abs(dx) + Math.abs(o.y - e.y) * 0.5; if (dd < bd) { bd = dd; best = o; }
+      }
+      if (!best) { e.say('Nothing to attack!'); return; }
+      e.target = best; e.ctrlTargetT = 2; e.facing = best.x >= e.x ? 1 : -1; e.specT = 0;
+    };
+  }
+  window.addEventListener('DOMContentLoaded', () => phoenixHooks(SB.world));
+
+  // giant dragon: the terror of the ground and the sky. Sweeps a long cone of fire from its jaws, whips its spiked
+  // tail round at anything behind it, rears up and beats its wings into a gale, and takes off to rain fire from
+  // above before crashing back down with a ground-shaking stomp. Timers: breath (inhale, then fire), whipT (tail),
+  // beatT (wing-beat gust), rainT (fire rain from the air), poundT (landing crouch); flyPh = 'up' | 'air' | 'down' |
+  // 'ctrl' (flown by the player) while it is in the air (e.move is switched to 'fly' for that, back to 'walk' on landing).
+  const drgFires = [];   // fires its breath leaves on the ground: [fire, when it burns out]
+  const DMW = [0, 0, 0];
+  // the two elements (def.drgEl): what the breath does, what rains from the sky, what it says and sounds like
+  const DRG_EL = {
+    fire: { hits: ['fire', 'hot'], hurtBy: ['ice', 'cold', 'snow'], sfx: 'fire', drop: 'fireball', breathSay: ['*FWOOOOOSH*', 'BURN!', 'ROOOAAAR!'], rainSay: ['RAIN OF FIRE!', 'BURN FROM ABOVE!', '*FWOOOOSH*'], snuffSay: '*its fire sputters out*' },
+    ice: { hits: ['ice', 'cold', 'snow'], hurtBy: ['fire', 'hot', 'lava'], sfx: 'freeze', drop: 'icicle', breathSay: ['*KSSHHHHHH*', 'FREEZE!', 'WINTER COMES!'], rainSay: ['RAIN OF ICE!', 'FREEZE FROM ABOVE!', '*KSSHHHH*'], snuffSay: '*its frost melts away*' }
+  };
+  const drgEl = e => DRG_EL[e.def.drgEl] || DRG_EL.fire;
+  // where its mouth is in the world right now and which way the fire goes (the same transform as the drawing)
+  function dragonMouthWorld(e, W) {
+    const M = D.dragonMouth(e, W.time), K = ks(e), f = e.facing, th = (e.angle || 0) + (e.tilt || 0), c = Math.cos(th), s = Math.sin(th);
+    const x = M[0] * f * K, y = M[1] * K, dx = Math.cos(M[2]) * f, dy = Math.sin(M[2]);
+    DMW[0] = e.x + x * c - y * s; DMW[1] = e.y + x * s + y * c; DMW[2] = Math.atan2(dx * s + dy * c, dx * c - dy * s);
+    return DMW;
+  }
+  // one frame of fire from the mouth: everything in the cone burns, and where it hits the ground the grass catches
+  function dragonFire(e, dt, W, R) {
+    const M = dragonMouthWorld(e, W), mx = M[0], my = M[1], a = M[2], dx = Math.cos(a), dy = Math.sin(a), K = ks(e);
+    let L = R, ground = false;
+    if (dy > 0.05) { const g = (W.groundY - 6 - my) / dy; if (g < L) { L = Math.max(20, g); ground = true; } }
+    e.fireLen = L / K;   // for the drawings: how long the cone is
+    const ice = e.def.drgEl === 'ice', el = drgEl(e);
+    for (let k = 0; k < 3; k++) {
+      const sp = 480 + Math.random() * 260, sd = (Math.random() - 0.5) * 0.36, life = Math.min(0.8, L / sp) * (0.7 + Math.random() * 0.35);
+      if (ice) W.particle('puff', mx, my, { vx: Math.cos(a + sd) * sp, vy: Math.sin(a + sd) * sp, life: life * 1.1, size: 7 + Math.random() * 10 * e.scale });
+      else W.particle('flame', mx, my, { vx: Math.cos(a + sd) * sp, vy: Math.sin(a + sd) * sp, life, size: 9 + Math.random() * 12 * e.scale });
+    }
+    if (ice) { if (Math.random() < dt * 30) { const u = Math.random(); W.particle('sparkle', mx + dx * L * u, my + dy * L * u + (Math.random() - 0.5) * 40 * u, { vx: dx * 160, vy: 40, life: 0.6, size: 4 }); } }
+    else if (Math.random() < dt * 10) W.particle('smoke', mx + dx * L, my + dy * L - 10, { vx: (Math.random() - 0.5) * 40, vy: -60, life: 1, size: 9 });
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || SB.kin(e, o) || (!ice && (o.special === 'fire' || o.special === 'fireball'))) continue;
+      const px = o.x - mx, py = o.y - my, s = px * dx + py * dy;
+      if (s < -o.w * 0.3 || s > L + o.w * 0.4) continue;
+      if (Math.abs(px * dy - py * dx) > 16 * K + s * 0.26 + Math.min(o.w, o.h) * 0.4) continue;
+      if (o.def.weak && o.weakT <= 0 && o.def.weak.some(w => el.hits.includes(w))) W.weaken(o, e);   // fire on an ice dragon, frost on a fire dragon
+      if (ice) {   // frost: freezes creatures solid (and slows them), snuffs out fires
+        if (o.creature) { W.freeze(o, e, 2.5); if (!o.static && !o.held) o.vx *= Math.max(0, 1 - dt * 4); }
+        else if (o.special === 'fire') { o.meltT = (o.meltT || 0) + dt * 3; if (o.meltT > 1) W.extinguish(o); }
+        else if (o.special === 'fireball') { W.popText(o.x, o.y - 10, 'Fizz!', 14); W.remove(o, 'poof'); }
+        if (o.onFire > 0) W.douse(o, true);
+      } else { W.burn(o, e, dt); if (o.frozenT > 0) W.thaw(o); }
+      if (o.creature && !o.static && !o.held && !o.def.boss) o.vx += dx * 500 * dt;
+    }
+    if (ice) {   // frost spreads where it hits the ground
+      if (ground && Math.random() < dt * 14) W.particle('sparkle', mx + dx * L + (Math.random() - 0.5) * 60, W.groundY - 6, { vy: -30, life: 0.9, size: 5 });
+      return;
+    }
+    if (ground && (e.fireN || 0) < 6) {
+      const gx = mx + dx * L;
+      if (Math.abs(gx - (e.fireLastX == null ? -1e9 : e.fireLastX)) > 85 * e.scale && gx > 20 && gx < W.W - 20) {
+        const f = W.spawn('fire', gx, W.groundY - 20, { quiet: true, scale: 0.8 + Math.random() * 0.35 });
+        if (f) { f.spawnT = 0.6; drgFires.push([f, W.time + 4 + Math.random() * 2.5]); e.fireN = (e.fireN || 0) + 1; e.fireLastX = gx; }
+      }
+    }
+  }
+  // the tail lashes round: everything behind it (or under its belly) is knocked flying
+  function dragonTail(e, W) {
+    const f = e.facing, K = ks(e); let n = 0;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || o.static || o.held || SB.kin(e, o) || (o.noCollide && !o.creature)) continue;
+      const rx = (o.x - e.x) * f;
+      if (rx > e.w * 0.22 + o.w * 0.3 || rx < -(e.w * 0.5 + 200 * e.scale + o.w * 0.5)) continue;
+      if (o.bottom < e.y - e.h * 0.4 || o.top > e.bottom + 8) continue;
+      const dir = rx < 0 ? -f : f, m = Math.min(1.6, 4.5 / Math.sqrt(Math.max(0.3, o.mass)));
+      o.vx = dir * (520 + Math.random() * 260) * m; o.vy = -(480 + Math.random() * 220) * m; o.grounded = false; o.angVel = (Math.random() - 0.5) * 16;
+      if (o.creature) { W.hurt(o, 3, e, { quiet: true }); o.dizzy = Math.max(o.dizzy, 1); o.say(pick(['WHOAAA!', 'OOF!', 'The tail!', 'Aaaah!'])); }
+      n++;
+    }
+    const tx = e.x - f * 150 * K, ty = e.y + 30 * K;
+    W.sfx('heavy', tx); W.sfx('whoosh', e.x); W.shake(n ? 9 : 4);
+    if (n) { W.popText(tx, ty - 40, 'WHACK!', 30); W.burst('spark', tx, ty, 8, 200, { size: 6 }); }
+    W.puff(tx, W.groundY - 4, 6, 12);
+    e.say(pick(['*TAIL SWIPE*', 'BEHIND ME? FOOL!', 'GRAAH!']));
+  }
+  // the downbeat of the wings: a gale that blows everything in front of it away
+  function dragonGust(e, W) {
+    const f = e.facing, R = 560 * e.scale; let n = 0;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || o.static || o.held || SB.kin(e, o) || o.special === 'fire') continue;
+      const rx = (o.x - e.x) * f; if (rx < -e.w * 0.1 || rx > R) continue;
+      if (Math.abs(o.y - e.y) > 260 * e.scale) continue;
+      const k = 1 - Math.max(0, rx) / R, m = Math.min(2.2, 6 / Math.sqrt(Math.max(0.3, o.mass)));
+      o.vx += f * (300 + 650 * k) * m; o.vy = Math.min(o.vy, -(140 + 260 * k) * m); o.grounded = false; o.angVel += (Math.random() - 0.5) * 6 * m;
+      if (o.creature) { o.dizzy = Math.max(o.dizzy, 0.5 + k * 0.6); if (Math.random() < 0.6) o.say(pick(['WHOAAA!', 'So windy!', 'Hold on!', 'Blown away!'])); }
+      n++;
+    }
+    for (let i = 0; i < 14; i++) { const x = e.x + f * (e.w * 0.3 + Math.random() * R * 0.8), y = e.y + (Math.random() - 0.6) * e.h; W.particle('streak', x, y, { vx: f * 700, tx: f * 900, ty: 0, life: 0.3 + Math.random() * 0.2, size: 60 + Math.random() * 40 }); }
+    for (let i = 0; i < 5; i++) W.puff(e.x + f * (e.w * 0.4 + i * 70 * e.scale), W.groundY - 4, 3, 12);
+    W.sfx('wind', e.x); W.sfx('whoosh', e.x); W.shake(6);
+    W.popText(e.x + f * 180 * e.scale, e.top, 'WHOOOSH!', 30);
+    if (n) e.say(pick(['BE GONE!', '*WINGS BEAT*', 'FLY, LITTLE ONES!']));
+  }
+  function dragonTakeOff(e, W, ctrl) {
+    e.move = 'fly'; e.flyPh = ctrl ? 'ctrl' : 'up'; e.flyT = ctrl ? 0.4 : 0.8; e.rains = 0; e.grounded = false; e.lastAtk = 'fly';
+    if (!ctrl) { e.vy = -560 * Math.sqrt(e.scale); e.specT = 1; }
+    W.sfx('wind', e.x); W.sfx('whoosh', e.x); W.sfx('roar', e.x, 0.6); W.shake(6);
+    W.puff(e.x, e.bottom, 10, 16); W.burst('puff', e.x, e.bottom - 6, 10, 260, { size: 12, life: 0.7, vy: -40 });
+    e.say(pick(['To the skies!', 'ROOOAAAR!', '*great wings unfold*', 'You cannot hide from above!']));
+  }
+  function dragonLand(e, W, hard) {
+    e.move = 'walk'; e.flyPh = null; e.rainT = 0; e.fireLen = 0; e.poundT = D.DRG.land; e.specT = Math.max(e.specT, 1.1); e.lastAtk = 'land';
+    if (e.def.drgEl === 'ice') {   // the ice dragon's stomp shatters everything frozen around it
+      for (const o of W.entities) if (o !== e && o.frozenT > 0 && Math.abs(o.x - e.x) < (hard ? 480 : 300) * e.scale && o.bottom > e.y) { W.thaw(o, 'shatter'); W.hurt(o, hard ? 3 : 2, e, { quiet: true }); W.popText(o.x, o.top - 20, 'SHATTER!', 24); }
+      W.burst('shard', e.x, e.bottom - 4, 14, 320, { size: 6, g: 900, life: 0.8 });
+    }
+    W.stompWave(e, (hard ? 440 : 260) * e.scale, hard ? 720 : 420, hard ? 3 : 1);
+    W.shake(hard ? 22 : 10); W.puff(e.x - e.w * 0.3, e.bottom, 6, 16); W.puff(e.x + e.w * 0.3, e.bottom, 6, 16);
+    if (hard) { W.flash = 0.12; W.sfx('boom', e.x, 0.6); W.popText(e.x, e.top - 30, 'THOOOM!', 42); e.say(pick(e.def.roar)); }
+    else W.popText(e.x, e.top - 20, 'CRASH!', 30);
+  }
+  function dragonFlight(e, dt, W) {
+    const sq = Math.sqrt(e.scale), k = Math.min(1, dt * 6), down = e.bottom >= W.groundY - 3;
+    e.flyT -= dt;
+    if (e.flyPh === 'ctrl') { if (down && e.flyT <= 0) dragonLand(e, W, true); return; }
+    if (!e.flying) { if (down && e.flyT < 0.6) dragonLand(e, W, false); return; }   // stunned, frozen or webbed in the air: it drops out of the sky
+    if (e.controlled) { e.flyPh = 'ctrl'; return; }
+    const tg = e.target, live = tg && tg.alive && !tg.dying && !tg.ko;
+    if (e.flyPh === 'up') {
+      e.vy += (-520 * sq - e.vy) * k; e.vx += (e.facing * 90 - e.vx) * k;
+      if (e.flyT <= 0 || e.y < W.groundY * 0.35) { e.flyPh = 'air'; e.flyT = 5 + Math.random() * 2; e.rainDir = live ? (tg.x >= e.x ? 1 : -1) : e.facing; }
+    } else if (e.flyPh === 'air') {
+      const hy = clamp(live ? tg.top - 210 * e.scale - e.h * 0.3 : W.groundY * 0.3, W.groundY * 0.08 + e.h / 2, W.groundY - e.h / 2 - 140 * e.scale);
+      if (e.rainT > 0) {   // strafing over its prey, breathing fire straight down
+        e.facing = e.rainDir; e.faceT = 0;
+        e.vx += (e.rainDir * 250 * sq - e.vx) * k; e.vy += (clamp((hy - e.y) * 2.5, -300, 300) - e.vy) * k;
+      } else if (e.breath <= 0) {
+        const dir = e.rainDir || 1, hx = live ? tg.x - dir * 170 * e.scale : e.x;
+        e.vx += (clamp((hx - e.x) * 2.2, -340, 340) - e.vx) * k; e.vy += (clamp((hy - e.y) * 2.5, -420, 420) - e.vy) * k;
+        if (live && Math.abs(e.x - hx) < 140 * e.scale) { e.facing = dir; e.faceT = 0; }
+        if (live && e.specT <= 0 && Math.abs(e.x - hx) < 80 * e.scale && Math.abs(e.y - hy) < 110 * e.scale && (e.rains || 0) < 2) {
+          e.rainT = 2.3; e.dropT = 0.35; e.drops = 0; e.fireN = 0; e.fireLastX = null; e.facing = dir; e.specT = 1;
+          W.sfx(drgEl(e).sfx, e.x); W.sfx('roar', e.x, 0.7); W.shake(4); e.say(pick(drgEl(e).rainSay));
+        } else if (live && e.specT <= 0 && (tg.flying || tg.bottom < W.groundY - 60) && Math.abs(tg.y - e.y) < 130 * e.scale && (tg.x - e.x) * e.facing > 0 && Math.abs(tg.x - e.x) < D.DRG.reach * ks(e) * 0.9) {
+          dragonAttack(e, W, 'breath');   // something else up here with it: fire straight at it
+        }
+      }
+      if (e.rainT <= 0 && e.breath <= 0 && (e.flyT <= 0 || !live && e.flyT < 3 || (e.rains || 0) >= 2 || ((e.rains || 0) >= 1 && Math.random() < dt * 0.8))) {
+        e.flyPh = 'down'; W.sfx('whoosh', e.x); e.say(pick(['HERE I COME!', '*dives*', 'FEEL MY WEIGHT!']));
+      }
+    } else if (e.flyPh === 'down') {
+      const lx = live ? tg.x : e.x;
+      e.vx += (clamp((lx - e.x) * 2.2, -420, 420) - e.vx) * k; e.vy += (780 * sq - e.vy) * Math.min(1, dt * 4);
+      if (down) dragonLand(e, W, true);
+    }
+  }
+  function dragonAttack(e, W, kind) {
+    const tg = e.target;
+    if (tg && tg.alive && kind !== 'tail') { e.facing = tg.x >= e.x ? 1 : -1; e.faceT = 0; }
+    e.lastAtk = kind;
+    if (kind === 'breath') { e.breath = D.DRG.inhale + D.DRG.breath; e.specT = 3.2 + Math.random(); e.fireN = 0; e.fireLastX = null; W.sfx('roar', e.x, 0.5); e.say(pick(['*deep breath*', '*inhales*', 'Hhhhhhh...'])); }
+    else if (kind === 'tail') { e.whipT = D.DRG.tail; e.specT = 1.6; W.sfx('swing', e.x); }
+    else if (kind === 'gust') { e.beatT = D.DRG.beat; e.specT = 3; W.sfx('wind', e.x, 0.5); e.say(pick(['*rears up*', 'ROOOAR!', '*spreads its wings*'])); }
+    else if (kind === 'fly') dragonTakeOff(e, W, false);
+    else if (kind === 'rain') { e.rainT = 2.3; e.dropT = 0.35; e.drops = 0; e.fireN = 0; e.fireLastX = null; e.rainDir = e.facing; W.sfx(drgEl(e).sfx, e.x); e.say(drgEl(e).rainSay[0]); }
+  }
+  // a foe close behind it, or right under its belly where the fire can't reach: time for the tail
+  function dragonBehind(e, W) {
+    const f = e.facing;
+    for (const o of W.entities) {
+      if (o === e || !o.alive || o.dying || o.static || o.held || !o.creature || o.ko || SB.kin(e, o) || o.invisible) continue;
+      const rx = (o.x - e.x) * f;
+      if (rx > e.w * 0.22 || rx < -(e.w * 0.5 + 170 * e.scale)) continue;
+      if (o.bottom < e.y - e.h * 0.3 || o.top > e.bottom) continue;
+      return o;
+    }
+    return null;
+  }
+  S.dragonboss = function (e, dt, W) {
+    dragonHooks(W);
+    for (let i = drgFires.length - 1; i >= 0; i--) { const [f, until] = drgFires[i]; if (!f.alive || f.dying || W.time > until) { if (f.alive && !f.dying) W.remove(f, 'poof'); drgFires.splice(i, 1); } }
+    if (e.ko || e.held) {   // knocked out or picked up: it drops out of the sky and stops mid-attack
+      if (e.flyPh || e.move === 'fly') { e.flyPh = null; e.move = 'walk'; }
+      e.rainT = 0; e.whipT = 0; e.beatT = 0; e.breath = 0; e.fireLen = 0; e.prevWeakT = e.weakT;
+      return;
+    }
+    const R = D.DRG, K = ks(e);
+    e.specT -= dt;
+    // a knight's sword stings, but only its opposite element (cold for fire, heat for ice) stuns a dragon for long
+    const el = drgEl(e);
+    if (e.weakT > (e.prevWeakT || 0) + 0.3) {
+      let sword = false, elem = false;
+      for (const o of W.entities) {
+        if (o === e || !o.alive || Math.abs(o.x - e.x) > (e.w + o.w) / 2 + 24 || Math.abs(o.y - e.y) > (e.h + o.h) / 2 + 24) continue;
+        if (SB.matches(o, el.hurtBy)) elem = true; else if (o.tags.has('knight') || o.tags.has('sword')) sword = true;
+      }
+      if (sword && !elem) { e.dizzy = Math.min(e.dizzy, 0.35); e.hp = Math.min(e.hpMax, e.hp + 2); e.say(pick(['Curse you, sir knight!', 'A knight?! AGAIN?!', 'Ow! That sword!', 'Dragon slayers... GRR!'])); }
+      else { if (e.breath > 0 || e.rainT > 0) e.say(el.snuffSay); e.breath = 0; e.rainT = 0; e.fireLen = 0; W.burst('smoke', e.x + e.facing * 60 * K, e.y - 40 * K, 6, 60, { size: 10, life: 1 }); }   // its opposite snuffs out its breath
+    }
+    e.prevWeakT = e.weakT;
+    // smoke curls from its nostrils; embers spit from its jaws as it draws breath
+    if (Math.random() < dt * 2.5 || (e.breath > R.breath && Math.random() < dt * 18)) {
+      const M = dragonMouthWorld(e, W), inh = e.breath > R.breath;
+      W.particle(inh ? (e.def.drgEl === 'ice' ? 'sparkle' : 'spark') : (e.def.drgEl === 'ice' ? 'puff' : 'smoke'), M[0], M[1] - 6 * K, { vx: e.facing * 20 + (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 30, life: inh ? 0.4 : 1.1, size: inh ? 3 : 5 });
+    }
+    // ---- the attacks in progress ----
+    if (e.breath > 0) {
+      const was = e.breath; e.breath -= dt;
+      if (was > R.breath && e.breath <= R.breath) { W.sfx(el.sfx, e.x); W.sfx(el.sfx === 'fire' ? 'fire' : 'wind', e.x, 0.7); W.sfx('roar', e.x, 0.6); W.shake(5); e.say(pick(el.breathSay)); }
+      if (e.breath > 0 && e.breath <= R.breath) { dragonFire(e, dt, W, R.reach * K); if (Math.random() < dt * 3) W.sfx(el.sfx === 'fire' ? 'fire' : 'wind', e.x, 0.5); }
+      else e.fireLen = 0;
+    }
+    if (e.rainT > 0) {
+      e.rainT -= dt; dragonFire(e, dt, W, 900 * e.scale);
+      if (Math.random() < dt * 3) W.sfx(el.sfx === 'fire' ? 'fire' : 'wind', e.x, 0.5);
+      e.dropT -= dt;
+      if (e.dropT <= 0 && (e.drops || 0) < 4) {   // and gobbets of fire that burst where they land (or a hail of icicles)
+        e.dropT = 0.5; e.drops = (e.drops || 0) + 1;
+        const M = dragonMouthWorld(e, W), n = el.drop === 'icicle' ? 3 : 1;
+        for (let i = 0; i < n; i++) {
+          const fb = W.spawn(el.drop, M[0], M[1], { scale: Math.max(0.6, e.scale * 0.8), quiet: true }); if (!fb) break;
+          fb.owner = e; fb.x = M[0]; fb.y = M[1]; fb.vx = e.vx * 0.5 + Math.cos(M[2]) * 160 + (i - (n - 1) / 2) * 140; fb.vy = 220 + Math.sin(M[2]) * 200; fb.grounded = false;
+          if (n > 1) { fb.facing = 1; fb.angle = Math.atan2(fb.vy, fb.vx); }
+        }
+        if (n > 1) W.sfx('whoosh', M[0], 0.5);
+      }
+      if (e.rainT <= 0) { e.rainT = 0; e.fireLen = 0; e.rains = (e.rains || 0) + 1; e.rainDir = -(e.rainDir || e.facing); e.specT = 0.8; }
+    }
+    if (e.whipT > 0) {
+      const was = e.whipT; e.whipT -= dt;
+      if (was > 0.42 && e.whipT <= 0.42) dragonTail(e, W);
+      if (e.whipT > 0.3 && e.whipT < 0.52 && Math.random() < dt * 40) W.particle('streak', e.x - e.facing * (100 + Math.random() * 90) * K, e.y + (Math.random() - 0.3) * 50 * K, { tx: -e.facing * 300, ty: 600, life: 0.2, size: 60 });
+    }
+    if (e.beatT > 0) {
+      const was = e.beatT; e.beatT -= dt;
+      if (was > 0.45 && e.beatT <= 0.45) dragonGust(e, W);
+      if (was > 0.12 && e.beatT <= 0.12 && e.grounded) { W.stompWave(e, 260 * e.scale, 460, 1); W.shake(10); W.popText(e.x + e.facing * 60 * K, e.top, 'STOMP!', 26); }   // and down come the front feet
+    }
+    if (e.poundT > 0) e.poundT -= dt;
+    // ---- flight: take off, circle, rain fire, land ----
+    if (e.flyPh) dragonFlight(e, dt, W);
+    else if (e.controlled && !e.grounded && e.move === 'walk' && W.ctrl.up && e.vy > -160 && !e.dizzy) dragonTakeOff(e, W, true);   // the player holds jump: up into the air
+    if (e.breath > 0 || e.whipT > 0 || e.beatT > 0 || e.rainT > 0 || e.poundT > 0 || e.flyPh) return;
+    if (!ready(e) || e.controlled || e.specT > 0) return;   // the player's dragon attacks with the E key (see dragonHooks)
+    // ---- choose the next attack (on the ground) ----
+    const tg = e.target;
+    if (!(tg && tg.alive && !tg.dying && !tg.ko)) { e.specT = 0.3; return; }
+    const dx = tg.x - e.x, dy = tg.y - e.y, adx = Math.abs(dx), ahead = dx * e.facing > 0;
+    if (dragonBehind(e, W) && (e.lastAtk !== 'tail' || Math.random() < 0.45)) return dragonAttack(e, W, 'tail');
+    if ((tg.flying || tg.bottom < e.top - 40 * e.scale) && e.lastAtk !== 'fly') return dragonAttack(e, W, 'fly');
+    if (adx < e.w * 0.3 && Math.abs(dy) < e.h && e.lastAtk !== 'tail' && Math.random() < 0.7) return dragonAttack(e, W, 'tail');   // right under its feet: the tail sweeps round underneath
+    if (!ahead && adx > e.w * 0.25) { e.specT = 0.2; return; }   // let it turn round first
+    const inReach = adx < R.reach * K * 0.95 && Math.abs(dy) < 220 * e.scale && adx > e.w * 0.2;
+    if (inReach && (e.lastAtk !== 'breath' || Math.random() < 0.4)) return dragonAttack(e, W, 'breath');
+    if (adx < 480 * e.scale && e.lastAtk !== 'gust' && Math.random() < 0.6) return dragonAttack(e, W, 'gust');
+    if (adx > 380 * e.scale && e.lastAtk !== 'fly' && e.lastAtk !== 'land' && Math.random() < 0.55) return dragonAttack(e, W, 'fly');
+    if (inReach) return dragonAttack(e, W, 'breath');
+    e.specT = 0.4;
+  };
+  // in control mode, E makes the dragon attack: tail at anything behind, fire at anything in front, a gale otherwise;
+  // in the air it rains fire. Holding jump in the air takes off; it lands with a stomp.
+  function dragonHooks(W) {
+    if (!W || W.dragonHooked || !W.ctrlSpecial) return;
+    W.dragonHooked = true;
+    const ctrlSpecial = W.ctrlSpecial;
+    W.ctrlSpecial = function () {
+      const e = W.ctrl && W.ctrl.e;
+      if (!e || e.special !== 'dragonboss') return ctrlSpecial.apply(W, arguments);
+      if (e.ko || e.dying || W.ctrl.atkCd > 0) return;
+      W.ctrl.atkCd = 0.6;
+      if (e.breath > 0 || e.whipT > 0 || e.beatT > 0 || e.rainT > 0 || e.poundT > 0) return;
+      e.target = null;
+      if (e.flyPh) { dragonAttack(e, W, 'rain'); return; }
+      if (dragonBehind(e, W)) { dragonAttack(e, W, 'tail'); return; }
+      let near = Infinity;
+      for (const o of W.entities) { if (o === e || !o.alive || o.dying || !o.creature || o.ko) continue; const rx = (o.x - e.x) * e.facing; if (rx > 0 && rx < near) near = rx; }
+      dragonAttack(e, W, near < D.DRG.reach * ks(e) * 0.95 || near === Infinity ? 'breath' : 'gust');
+    };
+  }
+  window.addEventListener('DOMContentLoaded', () => dragonHooks(SB.world));
 })();

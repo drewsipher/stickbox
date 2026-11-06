@@ -101,7 +101,7 @@
     if (o.wings !== 'none') w = Math.max(w, 48 * u);
     if (o.fur) w = Math.max(w, 40 * u);
     if (['staff', 'broom', 'pitchfork', 'flag', 'balloon', 'scythe'].includes(o.item)) w = Math.max(w, 44 * u);
-    return { w, h: o.size, draw(p, e, t) { D.drawHumanoid(p, e, t, o, u); } };
+    return { kind: 'humanoid', o, w, h: o.size, draw(p, e, t) { D.drawHumanoid(p, e, t, o, u); } };
   };
 
   // a tapered limb segment with rounded ends (upper arm, shin, ...)
@@ -410,7 +410,7 @@
     const w = right - left, h = feetY - topY;
     const ox = -(right + left) / 2, oy = -(feetY + topY) / 2;
     const g = { hx, hy, headRx, neckX, neckY, cosN, sinN };
-    return { w, h, draw(p, e, t) { p.ctx.translate(ox, oy); D.drawQuad(p, e, t, o, g); } };
+    return { kind: 'quad', o, g, ox, oy, w, h, draw(p, e, t) { p.ctx.translate(ox, oy); D.drawQuad(p, e, t, o, g); } };
   };
 
   D.drawQuad = function (p, e, t, o, g) {
@@ -590,7 +590,7 @@
     const w = right - left, h = feetY - topY;
     const ox = -(right + left) / 2, oy = -(feetY + topY) / 2;
     const g = { hx, hy, nx, ny, feetY };
-    return { w, h, draw(p, e, t) { p.ctx.translate(ox, oy); D.drawBiped(p, e, t, o, g); } };
+    return { kind: 'biped', o, g, ox, oy, w, h, draw(p, e, t) { p.ctx.translate(ox, oy); D.drawBiped(p, e, t, o, g); } };
   };
 
   D.drawBiped = function (p, e, t, o, g) {
@@ -657,6 +657,6 @@
   };
   // wrap a template at a different scale
   D.scaled = function (tpl, s) {
-    return { w: tpl.w * s, h: tpl.h * s, draw(p, e, t) { p.ctx.scale(s, s); tpl.draw(p, e, t); } };
+    return { kind: tpl.kind, o: tpl.o, g: tpl.g, ox: tpl.ox, oy: tpl.oy, inner: tpl, k: s * (tpl.k || 1), w: tpl.w * s, h: tpl.h * s, draw(p, e, t) { p.ctx.scale(s, s); tpl.draw(p, e, t); } };
   };
 })();

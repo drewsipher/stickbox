@@ -46,7 +46,7 @@ things with it if you're feeling mean.
 
 ## Bosses
 
-The **Bosses** button opens a panel with fourteen giant, powerful monsters. Click one to summon it (or just type its
+The **Bosses** button opens a panel with fifteen giant, powerful monsters. Click one to summon it (or just type its
 name). Bosses have lots of health (a big bar with their name floats over them), shake the ground when they walk or
 land, hit much harder than ordinary creatures, and each has a signature attack:
 
@@ -66,6 +66,7 @@ land, hit much harder than ordinary creatures, and each has a signature attack:
 | **wasp swarm** (wasps, swarm, killer bees, hornets) | a crowned queen leads a swarm of individually flying wasps that splits up to mob up to three enemies, stinging over and over; the queen keeps hatching new wasps, growing the swarm up to 90 | fire, smoke, water and rain (wasps die flying into them), cold, fans, explosions, and **clicking on wasps swats them** |
 | **beetle swarm** (beetles, bugs, cockroaches, beetle king) | a king rhinoceros beetle leads a carpet of armored beetles that crawl across the ground, climb up their victims and bite, mob up to three enemies, and fly after anything in the air; the king keeps hatching more, up to 110 | stomps (boots, shoes, ground-pounds), chickens, birds and frogs (they eat beetles), water, rain and fire; a click cracks a beetle's shell, a second click squashes it |
 | **giant praying mantis** (praying mantis, mantis) | an ambush hunter: holds still and fades into camouflage (enemies don't notice it until they're close), strikes with spiked forelegs to grab a victim and bite it repeatedly, eats small bugs and mice in one bite, slashes big enemies, and leaps across the screen | birds (eagles, owls, crows, chickens) and cold |
+| **phoenix** (fire bird, firebird, flame bird, sun bird) | rules the sky: blazing dives that set everything it touches alight and leave a trail of fire on the ground, and wing-beats that hurl fanned fireballs from its beak; fireproof, and burns whatever touches it. **Rebirth**: the first knock-out turns it into a pillar of flame and a heap of ash with a glowing egg, which hatches it again with half its health (click the ashes to hurry it along); the second knock-out is final | water, rain, snow, ice and anything cold |
 
 Typing `boss` (or `bosses`) summons a random one. A boss that gets knocked out poops itself: a stinky pile flies out behind it with a big PLOP! The **Poop** button switches this off for younger players: no boss poop, the word `poop` makes nothing, and any poop on screen is cleaned up (remembered per browser). `angry bull` is the boss; `giant bull` is still an ordinary bull made bigger, and the boss is larger. Touching a boss's weakness deals heavy damage and stuns it ("WEAKNESS!"). Explosions (bombs, meteors, fireballs)
 now damage creatures too, so cannons and bombs are a fair way to fight a boss, as is an army of knights. Bosses fight
@@ -110,7 +111,7 @@ origin, e.g. `file://`, `http://localhost:8000` or a LAN host) straight from Chr
 | `js/words-*.js` | The ~350 definitions (animals, people & creatures, vehicles, items) |
 | `js/sound.js` | Synthesized sound effects (Web Audio) and the Sound on/off switch |
 | `js/colors.js` | The paint box: a palette (body colour plus role colours like skin, cloth, hat, window, wing) for every definition |
-| `js/bosses.js` | The fourteen giant bosses: drawings, definitions, signature attacks and weaknesses |
+| `js/bosses.js` | The fifteen giant bosses: drawings, definitions, signature attacks and weaknesses |
 | `js/entity.js` | Entity state and the AI brain (temperaments, hunting, fleeing, wander/hop/fly/flop) |
 | `js/game.js` | Physics, collisions, specials (bombs, fire, tornado, UFO beam...), particles, input, trash bin, UI, render loop |
 
