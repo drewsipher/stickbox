@@ -24,7 +24,8 @@
   const LEGS = [{ fore: false, near: false }, { fore: true, near: false }, { fore: false, near: true }, { fore: true, near: true }];
   const GALLOP = [0, 0.56, 0.1, 0.66], TROT = [0.5, 0, 0, 0.5];   // where in its stride each leg is
   const NECK = [30, -17];                                    // neck base -> head pivot at rest
-  D.WOLF = { G, HIP, TS, TN, TT, FL, HL, K: DRAWK, mouth: [68, 5] };
+  const HS = 1.12;                                           // the head is drawn this much bigger than its working units
+  D.WOLF = { G, HIP, TS, TN, TT, FL, HL, K: DRAWK, HS, mouth: [68, 5] };
 
   // two-bone IK: the joint between a (root) and b (end) for bone lengths L1, L2; bend +1 puts it behind (elbow), -1 in front (stifle)
   function ik(ax, ay, bx, by, L1, L2, bend, out) {
@@ -96,7 +97,7 @@
     const breathe = Math.sin(t * 2.4 + (e.seed || 0)) * 0.8;
     const vy = e.vy || 0;
     const pitch = s.rear * 0.38 + s.sit * 0.62 - s.crouch * 0.07 + flex + s.leap * clamp(-vy / 1600, -0.22, 0.26);
-    const drop = s.sit * 80 + s.crouch * 18 + s.rear * 8 + s.lie * 62 - s.leap * 4 + bob + (held ? -6 : 0);
+    const drop = s.sit * 80 + s.crouch * 18 + s.rear * 8 + s.lie * 62 + s.ko * 64 - s.leap * 4 + bob + (held ? -6 : 0);
     P.pitch = pitch; P.sit = s.sit; P.lie = s.lie; P.leap = s.leap;
     const hx = HIP[0] + s.sit * 6 - s.rear * 8, hy = HIP[1] + drop;
     P.hip[0] = hx; P.hip[1] = hy;
@@ -115,9 +116,11 @@
       if (held) {   // dangling, paws kicking
         const k2 = Math.sin(t * 9 + i * 1.7);
         px = rx + (fore ? 10 : -12) + k2 * 10; py = ry + (fore ? 92 : 104) * 0.93; pa = 0.9 + k2 * 0.2; wrist = 'line';
-      } else if (s.ko > 0.5) {   // knocked out: legs limp and stretched
-        const k2 = Math.sin(t * 1.3 + i) * 2;
-        px = rx + (fore ? 30 : -34) + k2; py = ry + (fore ? 86 : 96); pa = 0.5; wrist = 'line';
+      } else if (s.ko > 0.5) {   // knocked out: flat out on its side, legs limp and stretched along the ground
+        const k2 = Math.sin(t * 1.3 + i) * 1.5;
+        if (fore) { px = rx + 60 + (near ? 8 : 0) + k2; py = G - (near ? 1 : 4); pa = 0.15; }
+        else { px = rx - 56 - (near ? 8 : 0) + k2; py = G - (near ? 2 : 5); pa = 1.35; }
+        wrist = 'line';
       } else if (s.lie > 0.5) {   // lying down: forepaws out in front, hind legs folded under
         if (fore) { px = rx + 52 + (near ? 6 : 0); py = G; } else { px = rx + 34; py = G; }
         wrist = fore ? 'flat' : 'sit';
@@ -158,10 +161,10 @@
     let wob = 0;
     if (e.dizzy > 0 && !ko) wob = Math.sin(t * 6) * 0.22;
     if (held) wob = Math.sin(t * 5) * 0.25;
-    const nr = -pitch * 0.4 - s.up * 0.45 + s.down * 0.5 + s.ko * 0.2 + wob * 0.4 + s.lie * 0.25;
+    const nr = -pitch * 0.4 - s.up * 0.45 + s.down * 0.5 + s.ko * 0.55 + wob * 0.4 + s.lie * 0.25;
     const cn = Math.cos(nr), snn = Math.sin(nr);
     P.HP[0] = P.N[0] + NECK[0] * cn - NECK[1] * snn; P.HP[1] = P.N[1] + NECK[0] * snn + NECK[1] * cn;
-    P.headRot = -pitch * 0.45 - s.up * 0.85 + s.down * 0.6 + wob + s.ko * 0.25 + (hurt ? Math.sin(t * 30) * 0.06 : 0) + Math.sin(t * 0.8 + (e.seed || 0)) * 0.03 + s.lie * 0.2;
+    P.headRot = -pitch * 0.45 - s.up * 0.85 + s.down * 0.6 + wob + s.ko * 0.35 + (hurt ? Math.sin(t * 30) * 0.06 : 0) + Math.sin(t * 0.8 + (e.seed || 0)) * 0.03 + s.lie * 0.2;
     P.jaw = s.jaw; P.ear = s.ear; P.hackle = s.hackle; P.snarl = s.snarl; P.tongue = s.ko;
     // ---- tail: a bushy brush, hanging, raised when it hunts, streaming when it runs, tucked when it is scared ----
     const sw = Math.sin(t * 2.1 + (e.seed || 0)) * 0.1 + (gallop ? Math.sin(u0 * TAU) * 0.18 : 0) + (held ? Math.sin(t * 7) * 0.3 : 0);
@@ -176,7 +179,7 @@
     return P;
   };
   // a point given in head-local units (x along the muzzle, y down), in template units
-  const headPt = (P, x, y, out) => { const c = Math.cos(P.headRot), s = Math.sin(P.headRot); out[0] = P.HP[0] + x * c - y * s; out[1] = P.HP[1] + x * s + y * c; return out; };
+  const headPt = (P, x, y, out) => { const c = Math.cos(P.headRot) * HS, s = Math.sin(P.headRot) * HS; out[0] = P.HP[0] + x * c - y * s; out[1] = P.HP[1] + x * s + y * c; return out; };
   D.wolfHeadPt = headPt;
   // the mouth in game coordinates (bites, the howl's sound waves)
   const MW = [0, 0];
@@ -187,24 +190,39 @@
   };
 
   // ---------- the painting ----------
-  const v = [0, 0], w2 = [0, 0];
-  // jagged fur fringe along a polyline: triangles sticking out on one side
-  function fringe(p, pts, len, side, step, jit) {
-    for (let i = 2; i < pts.length; i += 2) {
-      const x0 = pts[i - 2], y0 = pts[i - 1], x1 = pts[i], y1 = pts[i + 1], dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1;
-      const nx = -dy / d * side, ny = dx / d * side, n = Math.max(1, Math.round(d / step));
-      for (let k = 0; k < n; k++) {
-        const u0 = k / n, u1 = (k + 1) / n, um = (u0 + u1) / 2, l = len * (0.7 + 0.45 * Math.abs(Math.sin((i + k) * 2.3 + jit)));
-        p.poly([x0 + dx * u0, y0 + dy * u0, x0 + dx * um + nx * l - dx / d * l * 0.45, y0 + dy * um + ny * l - dy / d * l * 0.45, x0 + dx * u1, y0 + dy * u1], true);
+  // a closed outline through control points [x, y, fur] (Catmull-Rom, n samples a segment); segments whose start
+  // point has fur > 0 get a ragged edge of tufts that long, swept back toward the tail
+  function furLoop(cp, n, seed) {
+    const out = [], m = cp.length;
+    for (let i = 0; i < m; i++) {
+      const p0 = cp[(i - 1 + m) % m], p1 = cp[i], p2 = cp[(i + 1) % m], p3 = cp[(i + 2) % m], fur = p1[2] || 0, nn = fur > 0 ? n * 2 : n;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ox = dy / d, oy = -dx / d;
+      for (let j = 0; j < nn; j++) {
+        const u = j / nn, u2 = u * u, u3 = u2 * u;
+        const f = k => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3);
+        let x = f(0), y = f(1);
+        if (fur > 0) {   // tufts: base, a tip lying back toward the tail, a little shoulder
+          const ph = j % 3, r = Math.abs(Math.sin(Math.floor(j / 3) * 5.31 + i * 2.7 + seed)), l = fur * (0.45 + 0.8 * r);
+          if (ph === 1) { x += ox * l - l * 0.85; y += oy * l + l * 0.15; } else if (ph === 2) { x += ox * l * 0.22 - l * 0.2; y += oy * l * 0.22; }
+        }
+        out.push(x, y);
       }
     }
+    return out;
   }
-  // fur strokes (light or dark) inside a shape
-  function strands(p, pts, len, side, step, tilt, col, alpha) {
-    const c = p.ctx; c.save(); c.globalAlpha *= alpha; c.strokeStyle = col; c.lineWidth = Math.max(0.6, c.lineWidth * 0.55);
-    D.fur(p, pts, step, len, side, tilt); c.restore();
+  // an open ragged strip: along a base polyline, tufts of length len on one side, the other side `depth` inside
+  function furStrip(base, len, depth, side, seed) {
+    const top = [], bot = [], n = base.length / 2;
+    for (let i = 0; i < n; i++) {
+      const j = Math.min(n - 1, i + 1), k = Math.max(0, i - 1), dx = base[j * 2] - base[k * 2], dy = base[j * 2 + 1] - base[k * 2 + 1], d = Math.hypot(dx, dy) || 1;
+      const nx = dy / d * side, ny = -dx / d * side, taper = Math.sin(Math.PI * (i + 0.5) / n) ** 0.6;
+      const l = (i % 2 ? len * (0.55 + 0.5 * Math.abs(Math.sin(i * 3.7 + seed))) : len * 0.15) * taper;
+      top.push(base[i * 2] + nx * l - (i % 2 ? l * 0.35 : 0), base[i * 2 + 1] + ny * l);
+      bot.unshift(base[i * 2] - nx * depth * taper, base[i * 2 + 1] - ny * depth * taper);
+    }
+    return [top, top.concat(bot)];
   }
-  // a smooth sampled curve through points (Catmull-Rom), n samples per segment
+  // an open polyline, resampled (n per segment)
   function spline(pts, n) {
     const out = [];
     for (let i = 0; i < pts.length - 1; i++) {
@@ -218,122 +236,143 @@
     const L = pts[pts.length - 1]; out.push(L[0], L[1]);
     return out;
   }
+  // fill without the soft outline (fur that has to melt into what is under it)
+  const bare = (p, pts, fill) => { const k = p.inkK; p.inkK = 0; p.poly(pts, fill); p.inkK = k; };
+  // fur strokes
+  function strands(p, pts, len, side, step, tilt, col, alpha) {
+    const c = p.ctx; c.save(); c.globalAlpha *= alpha; c.strokeStyle = col; c.lineWidth = Math.max(0.6, c.lineWidth * 0.5);
+    D.fur(p, pts, step, len, side, tilt); c.restore();
+  }
+  // a soft round light or shadow (muscle, form) with no edge
+  function glow(c, x, y, rx, ry, col, a) {
+    c.save(); c.translate(x, y); c.scale(1, ry / rx);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.globalAlpha *= a; c.fillStyle = g; c.beginPath(); c.arc(0, 0, rx, 0, TAU); c.fill(); c.restore();
+  }
+  const rgba = (h, a) => { const q = SB.hexRGB(h); return 'rgba(' + q[0] + ',' + q[1] + ',' + q[2] + ',' + a + ')'; };
+  // a leg as one tapered shape down its joints (root, joint, wrist/hock, paw) with these widths
+  function legShape(L, wd) {
+    const J = [L.r, L.a, L.b, [L.p[0], L.p[1] - 4]], lft = [], rgt = [];
+    for (let i = 0; i < 4; i++) {
+      const a = J[Math.max(0, i - 1)], b = J[Math.min(3, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d * wd[i] / 2, ny = dx / d * wd[i] / 2;
+      lft.push(J[i][0] + nx, J[i][1] + ny); rgt.unshift(J[i][0] - nx, J[i][1] - ny);
+    }
+    return lft.concat(rgt);
+  }
   D.drawWolfBoss = function (p, e, t) {
-    const P = D.wolfPose(e, t), c = p.ctx, pal = p.pal || {};
-    const BODY = pal.body || '#3a393d', FAR = pal.far || SB.shade(BODY, 0.35), MANE = pal.mane || SB.shade(BODY, 0.45), BELLY = pal.belly || SB.mixColor(BODY, '#c9c2b6', 0.35);
-    const LIGHT = SB.mixColor(BODY, '#e8e4dc', 0.45), DARK = SB.shade(BODY, 0.6);
+    const P = D.wolfPose(e, t), c = p.ctx, pal = p.pal || {}, seed = (e.seed || 0) % 10;
+    const BODY = pal.body || '#2c2b2f', FAR = pal.far || SB.shade(BODY, 0.4), MANE = pal.mane || SB.shade(BODY, 0.5), BELLY = pal.belly || SB.mixColor(BODY, '#c9c2b6', 0.35);
+    const LIGHT = SB.mixColor(BODY, '#e8e4dc', 0.5), DARK = SB.shade(BODY, 0.6);
     const MOUTH = pal.mouth || '#4a1010', TEETH = pal.teeth || '#efe6cf', CLAW = pal.claw || '#16120f', NOSE = pal.nose || '#0e0d0f', SCAR = pal.scar || '#8f736a';
-    const lw = c.lineWidth;
+    const lw = c.lineWidth, hk = 0.45 + 0.75 * P.hackle;
+    const cs = Math.cos(P.pitch), sn = Math.sin(P.pitch), hx = P.hip[0], hy = P.hip[1];
+    const tw = (x, y, f) => [hx + x * cs + y * sn, hy - x * sn + y * cs, f || 0];   // torso-local -> template (with a fur length)
     // ---- tail (behind everything) ----
     {
       const cl = spline(P.tail, 5), n = cl.length / 2, L = [], R = [];
       for (let i = 0; i < n; i++) {
         const j = Math.min(n - 1, i + 1), k = Math.max(0, i - 1), dx = cl[j * 2] - cl[k * 2], dy = cl[j * 2 + 1] - cl[k * 2 + 1], d = Math.hypot(dx, dy) || 1;
-        const u = i / (n - 1), wd = (6 + 13 * Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), 0.6) * (1 - u * u * 0.45)) * (1 + (i % 2) * 0.16), nx = -dy / d, ny = dx / d;
-        L.push(cl[i * 2] + nx * wd, cl[i * 2 + 1] + ny * wd); R.unshift(cl[i * 2] - nx * wd, cl[i * 2 + 1] - ny * wd);
+        const u = i / (n - 1), wd = (6 + 14 * Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.06)), 0.6) * (1 - u * u * 0.4)) * (i % 2 ? 1.28 : 0.92) + (i === n - 1 ? 0 : 0), nx = -dy / d, ny = dx / d;
+        const sw = i % 2 ? 4 : 0;   // tufts sweep toward the tip
+        L.push(cl[i * 2] + nx * wd + dx / d * sw, cl[i * 2 + 1] + ny * wd + dy / d * sw); R.unshift(cl[i * 2] - nx * wd + dx / d * sw, cl[i * 2 + 1] - ny * wd + dy / d * sw);
       }
       p.fill = BODY; p.poly(L.concat(R), true);
-      p.fill = MANE; const tip = []; for (let i = Math.floor(n * 0.62); i < n; i++) tip.push(cl[i * 2], cl[i * 2 + 1]);
-      if (tip.length >= 4) { c.save(); c.globalAlpha *= 0.8; D.tube(p, tip[0], tip[1], tip[Math.floor(tip.length / 4) * 2], tip[Math.floor(tip.length / 4) * 2 + 1], tip[tip.length - 2], tip[tip.length - 1], 20, 6, 6, true); c.restore(); }
-      strands(p, L, 7, -1, 6, 0.8, LIGHT, 0.4); strands(p, cl, 6, 1, 7, -0.6, DARK, 0.45);
+      const h0 = Math.floor(n * 0.6), TL = L.slice(h0 * 2), TR = R.slice(0, (n - h0) * 2);
+      c.save(); c.globalAlpha *= 0.85; bare(p, TL.concat(TR), MANE); c.restore();
+      strands(p, cl.slice(0, Math.floor(n * 0.7) * 2), 8, 1, 6, -0.9, LIGHT, 0.35); strands(p, cl, 7, -1, 6, 0.9, DARK, 0.5);
     }
-    // ---- a leg: three tapered bones and a big clawed paw ----
-    const leg = (L, col) => {
-      p.fill = col;
-      if (L.fore) { D.cap(p, L.r[0], L.r[1], L.a[0], L.a[1], 25, 17); D.cap(p, L.a[0], L.a[1], L.b[0], L.b[1], 16, 11); D.cap(p, L.b[0], L.b[1], L.p[0], L.p[1] - 4, 11, 10); }
-      else { D.cap(p, L.r[0], L.r[1], L.a[0], L.a[1], 30, 18); D.cap(p, L.a[0], L.a[1], L.b[0], L.b[1], 17, 10); D.cap(p, L.b[0], L.b[1], L.p[0], L.p[1] - 4, 10, 10); }
-      // feathering on the back of the legs
-      p.fill = col; fringe(p, [L.a[0] - 2, L.a[1] - 6, L.b[0] - 3, L.b[1] - 4], 6, L.fore ? -1 : 1, 7, L.r[0]);
-      // paw
+    // ---- legs: far pair dark, then the near pair, all tucked up under the body ----
+    const paw = (L, col) => {
       c.save(); c.translate(L.p[0], L.p[1]); c.rotate(L.pa);
-      p.fill = col; p.ellipse(3, -5, 11, 6.5, true, 0);
-      c.save(); c.globalAlpha *= 0.55; for (let k = 0; k < 3; k++) p.line(5 + k * 3.5, -9, 6 + k * 3.5, -2); c.restore();
-      p.fill = CLAW; for (let k = 0; k < 3; k++) { const cx = 9 + k * 3.2; p.poly([cx, -3.5, cx + 5.5, 0.5, cx + 1, -0.5], true); }
+      p.fill = col; p.poly([-6, -2, -4, -9, 6, -11, 14, -8, 17, -3, 14, 0, -4, 0], true);
+      c.save(); c.globalAlpha *= 0.5; c.strokeStyle = DARK; for (let k = 0; k < 3; k++) p.line(7 + k * 3.4, -10, 8 + k * 3.4, -2); c.restore();
+      p.fill = CLAW; for (let k = 0; k < 3; k++) { const cx = 9 + k * 3; p.poly([cx, -3, cx + 6, 1, cx + 0.5, -0.2], true); }
       c.restore();
     };
-    leg(P.legs[0], FAR); leg(P.legs[1], FAR);
-    // ---- torso: haunch, tucked flank, the deep chest, all on the hip pivot ----
-    c.save(); c.translate(P.hip[0], P.hip[1]); c.rotate(-P.pitch);
-    const back = [-24, -22, 12, -27, 60, -31, 104, -37, 136, -25];
-    const torso = [-32, -12, ...back, 150, 0, 141, 25, 118, 45, 80, 41, 34, 22, 2, 20, -18, 30, -34, 8];
-    p.fill = BODY; p.poly(torso, true);
-    // shaggy fringe under chest and belly, paler fur on the underside
-    p.fill = BODY; fringe(p, [141, 25, 118, 45, 80, 41, 34, 22], 8, 1, 7, 1);
-    c.save(); c.globalAlpha *= 0.5; p.fill = BELLY; p.poly([140, 4, 146, 18, 128, 38, 104, 42, 84, 34, 116, 26], true); c.restore();
-    strands(p, back, 8, -1, 5, 0.9, LIGHT, 0.45);
-    strands(p, [12, -16, 60, -20, 104, -24], 7, 1, 6, -0.8, DARK, 0.4);
-    c.save(); c.globalAlpha *= 0.32; p.arc(102, 6, 34, -1.4, 1.2); p.curve(52, -14, 66, 14, 52, 38); p.curve(30, -16, 40, 6, 30, 22); c.restore();   // shoulder, ribs
-    // hackles: a crest of black fur along the neck and withers, raised when it hunts
-    const hk = 0.45 + 0.75 * P.hackle;
-    p.fill = MANE;
-    const crest = []; for (let i = 0; i <= 10; i++) { const u = i / 10, x = lerp(48, 140, u), y = lerp(-31, -30, u) - Math.sin(u * Math.PI) * 6; crest.push(x, y + 3); }
-    fringe(p, crest, 13 * hk, -1, 7, 3);
+    const leg = (L, col) => {
+      p.fill = col; p.poly(legShape(L, L.fore ? [36, 21, 13, 12] : [44, 24, 13, 12]), true);
+      strands(p, [L.a[0], L.a[1], L.b[0], L.b[1]], 6, L.fore ? -1 : 1, 5, L.fore ? 0.6 : -0.6, L.fore ? DARK : LIGHT, 0.45);
+      paw(L, col);
+    };
+    leg(P.legs[0], FAR); leg(P.legs[1], FAR); leg(P.legs[2], BODY); leg(P.legs[3], BODY);
+    // ---- body and neck: one shaggy silhouette ----
+    const N = P.N, HP = P.HP, ndx = HP[0] - N[0], ndy = HP[1] - N[1], nd = Math.hypot(ndx, ndy) || 1, dX = ndx / nd, dY = ndy / nd, nX = -dY, nY = dX;
+    const at = (q, a, b, f) => [q[0] + nX * a + dX * b, q[1] + nY * a + dY * b, f || 0];
+    const mid = [(N[0] + HP[0]) / 2, (N[1] + HP[1]) / 2];
+    const outline = [tw(-24, -22, 2), tw(12, -26, 2), tw(60, -30, 3), tw(102, -37, 4), at(mid, -28, -4, 4), at(HP, -22, -6, 3), at(HP, 4, -12), at(HP, 21, 8, 9),
+      tw(152, 2, 6), tw(142, 28, 7), tw(118, 50, 8), tw(82, 46, 7), tw(44, 22, 5), tw(14, 12, 3), tw(-8, 20, 0), tw(-20, 34, 5), tw(-38, 8, 3), tw(-33, -12, 2)];
+    p.fill = BODY; p.poly(furLoop(outline, 6, seed), true);
+    // form: the haunch and the shoulder catch the light, the flank and the belly fall into shadow
+    const hp = tw(-6, 2), sp = tw(TS[0] - 6, TS[1] - 12), rb = tw(70, 12), bl = tw(70, 34);
+    glow(c, hp[0] - 6, hp[1] - 8, 26, 30, rgba(LIGHT, 0.6), 0.55); glow(c, sp[0] - 4, sp[1] - 8, 20, 28, rgba(LIGHT, 0.6), 0.5);
+    glow(c, rb[0], rb[1], 38, 20, rgba(DARK, 0.7), 0.5);
+    { const [, belly] = furStrip(spline([tw(140, 10), tw(126, 36), tw(96, 40), tw(60, 32)], 3).filter(() => true), 7, 8, 1, seed); c.save(); c.globalAlpha *= 0.55; bare(p, belly, BELLY); c.restore(); }
+    c.save(); c.globalAlpha *= 0.35; c.strokeStyle = DARK;
+    const k1 = tw(-24, 28), k2 = tw(-2, -6), k3 = tw(18, 20); p.curve(k1[0], k1[1], k2[0] - 6, k2[1], k3[0], k3[1]);   // the thigh's front edge
+    const s1 = tw(98, -26), s2 = tw(120, 4), s3 = tw(112, 34); p.curve(s1[0], s1[1], s2[0], s2[1], s3[0], s3[1]);    // behind the shoulder
     c.restore();
-    // ---- near hind leg with its big haunch ----
-    leg(P.legs[2], BODY);
-    c.save(); c.translate(P.hip[0], P.hip[1]); c.rotate(-P.pitch);
-    p.fill = BODY; p.ellipse(-4, 6, 27, 30, true, 0.25);
-    strands(p, [-24, -10, -12, -22, 8, -20], 8, -1, 5, 0.6, LIGHT, 0.35);
-    c.save(); c.globalAlpha *= 0.4; p.arc(-4, 8, 22, 1.2, 2.9); c.restore();
-    fringe(p, [-30, 10, -24, 28, -12, 36], 7, 1, 6, 2);
-    c.restore();
-    // ---- neck: thick and shaggy, a ruff under the throat ----
-    const N = P.N, HP = P.HP;
-    p.fill = BODY; D.cap(p, N[0] - 8, N[1] + 10, HP[0] + 4, HP[1] + 4, 66, 44);
-    { const dx = HP[0] - N[0], dy = HP[1] - N[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d;
-      p.fill = BELLY; c.save(); c.globalAlpha *= 0.75; fringe(p, [N[0] + 6 + nx * 26, N[1] + 18 + ny * 26, HP[0] + 8 + nx * 18, HP[1] + 8 + ny * 18], 12, 1, 7, 5); c.restore();
-      p.fill = MANE; fringe(p, [HP[0] - 6 - nx * 18, HP[1] - ny * 18, N[0] - nx * 30, N[1] - ny * 30], 14 * hk, 1, 7, 7);
-      strands(p, [N[0] - nx * 20, N[1] - ny * 20, HP[0] - nx * 12, HP[1] - ny * 12], 8, 1, 5, 0.5, LIGHT, 0.4); }
-    // ---- near foreleg ----
-    leg(P.legs[3], BODY);
-    c.save(); c.translate(P.hip[0], P.hip[1]); c.rotate(-P.pitch); p.fill = BODY; p.ellipse(TS[0] - 4, TS[1] - 10, 19, 27, true, -0.25); strands(p, [104, -14, 116, -26, 128, -20], 7, -1, 5, 0.5, LIGHT, 0.35); c.restore();
+    strands(p, spline([tw(-20, -18), tw(30, -24), tw(80, -29), tw(104, -33)], 3), 9, -1, 5, 0.95, LIGHT, 0.4);
+    strands(p, spline([tw(-30, -4), tw(-14, 18)], 3), 8, -1, 4, 0.7, LIGHT, 0.35);
+    // the dark saddle and the hackles, standing up along the neck and withers when it hunts
+    {
+      const base = spline([tw(40, -26), tw(80, -30), tw(104, -35), at(mid, -22, -4), at(HP, -16, -8)], 4);
+      const [top, strip] = furStrip(base, 13 * hk, 10, 1, seed + 2);
+      c.save(); c.globalAlpha *= 0.8; bare(p, strip, MANE); c.restore();
+      c.save(); c.globalAlpha *= 0.45; p.path(top, false, false); c.restore();
+      strands(p, base, 10, 1, 3, 0.9, MANE, 0.7); strands(p, base, 7, -1, 4, -0.8, MANE, 0.55);
+    }
+    // the throat ruff, paler
+    { const base = spline([at(HP, 12, 2), at(mid, 22, 0), tw(150, 6)], 4); const [, strip] = furStrip(base, 10, 9, -1, seed + 4); c.save(); c.globalAlpha *= 0.6; bare(p, strip, BELLY); c.restore(); }
+    strands(p, spline([at(N, -12, 0), at(HP, -8, 0)], 4), 9, -1, 4, 0.6, LIGHT, 0.3);
     // ---- head ----
-    c.save(); c.translate(HP[0], HP[1]); c.rotate(P.headRot);
+    c.save(); c.translate(HP[0], HP[1]); c.rotate(P.headRot); c.scale(HS, HS);
     const ear = (near) => {
-      c.save(); c.translate(near ? 4 : 12, -19); c.rotate(-P.ear * 1.15 - 0.12);
-      p.fill = near ? BODY : FAR; p.poly([-10, 4, -3, -30, 9, 3], true);
-      if (near) { p.fill = SB.mixColor(BODY, '#8a6060', 0.35); p.poly([-5, 1, -2.5, -21, 4, 1], true); strands(p, [-5, 2, -2, -14], 5, 1, 3, 0.4, LIGHT, 0.5); }
+      c.save(); c.translate(near ? 4 : 13, -19); c.rotate(-P.ear * 1.15 - 0.12);
+      p.fill = near ? BODY : FAR; p.poly([-10, 4, -6, -14, -2, -31, 4, -14, 9, 3], true);
+      if (near) { bare(p, [-6, 1, -2.5, -23, 4, 1], SB.mixColor(BODY, '#7a5a5a', 0.4)); strands(p, [-6, 1, -3, -16], 6, 1, 2.5, 0.3, LIGHT, 0.55); }
       c.restore();
     };
     ear(false);
-    // cheek ruff, swept back
-    p.fill = MANE; fringe(p, [6, -18, -6, -6, -6, 10, 6, 20], 13, -1, 6, 9);
-    const sn = P.snarl, jawA = P.jaw * 0.72;
-    const lip = 9 - sn * 4;                                   // the upper lip curls up off the teeth in a snarl
+    const snr = P.snarl, jawA = P.jaw * 0.72, lip = 9 - snr * 4;   // the upper lip curls up off the teeth in a snarl
     // the inside of the mouth, then the lower jaw on its hinge
     if (jawA > 0.04) { p.fill = MOUTH; const ca = Math.cos(jawA), sa = Math.sin(jawA); p.poly([10, 9, 66, 6, 10 + 56 * ca - 4 * sa, 9 + 56 * sa + 4 * ca, 10 + 20 * ca - 4 * sa, 9 + 20 * sa + 4 * ca], true); }
     c.save(); c.translate(10, 9); c.rotate(jawA);
-    if (P.tongue > 0.3 || jawA > 0.3) { p.fill = '#b5505a'; p.ellipse(34 + P.tongue * 14, 2 + P.tongue * 3, 18 + P.tongue * 8, 3.2, true, 0.1 + P.tongue * 0.3); }
+    if (P.tongue > 0.3 || jawA > 0.3) { p.fill = '#a8464f'; p.ellipse(34 + P.tongue * 14, 2 + P.tongue * 3, 18 + P.tongue * 8, 3.2, true, 0.1 + P.tongue * 0.3); }
     p.fill = BODY; p.poly([-6, -2, 26, 0, 56, -1, 58, 3, 52, 9, 24, 10, -4, 7], true);
-    c.save(); c.globalAlpha *= 0.6; p.fill = BELLY; p.poly([4, 4, 30, 6, 50, 6, 30, 9], true); c.restore();
+    c.save(); c.globalAlpha *= 0.6; bare(p, [4, 4, 30, 6, 50, 6, 30, 9], BELLY); c.restore();
     p.fill = TEETH; for (let k = 0; k < 4; k++) { const x = 28 + k * 6.5; p.poly([x, 0.5, x + 2, -4.5, x + 4, 0.5], true); }
     p.poly([48, 0.5, 51, -9, 54, 0.5], true);                 // lower fang
     c.restore();
-    // skull and muzzle
+    // skull and long muzzle, a shaggy ruff swept back off the cheeks
     p.fill = BODY;
-    p.poly([-8, -6, 0, -21, 18, -26, 33, -19, 50, -14, 64, -9, 72, -4, 72, 4, 68, lip - 1, 48, lip, 30, lip + 1, 14, 14, -6, 11], true);
-    c.save(); c.globalAlpha *= 0.55; p.fill = BELLY; p.poly([40, lip - 3, 68, lip - 4, 60, lip + 0.5, 40, lip + 0.5], true); c.restore();
-    strands(p, [0, -18, 18, -23, 33, -17], 6, -1, 4, 0.9, LIGHT, 0.45);
-    strands(p, [36, -14, 52, -11, 64, -7], 4, -1, 4, 1.2, LIGHT, 0.3);
+    p.poly(furLoop([[-10, -6, 4], [0, -21, 0], [18, -26, 0], [33, -19, 0], [50, -14, 0], [64, -9, 0], [72, -4, 0], [72, 4, 0], [68, lip - 1, 0], [48, lip, 0], [30, lip + 1, 0], [14, 15, 5], [-4, 16, 5]], 4, seed), true);
+    { const [, strip] = furStrip(spline([[2, -20], [-4, -4], [2, 14], [12, 18]], 4), 13, 6, -1, seed + 6); c.save(); c.globalAlpha *= 0.9; bare(p, strip, MANE); c.restore(); }
+    c.save(); c.globalAlpha *= 0.5; bare(p, [40, lip - 4, 68, lip - 5, 62, lip + 0.5, 40, lip + 0.5], BELLY); c.restore();
+    glow(c, 20, -12, 16, 11, rgba(LIGHT, 0.6), 0.45);
+    strands(p, [2, -18, 18, -23, 33, -17], 6, -1, 3.5, 0.9, LIGHT, 0.45);
+    strands(p, [36, -14, 52, -11, 64, -7], 4, -1, 3.5, 1.2, LIGHT, 0.3);
+    strands(p, [8, 8, 20, 12, 30, 12], 6, 1, 3, -0.6, DARK, 0.4);
     // upper teeth, bared
     p.fill = TEETH;
-    for (let k = 0; k < 4; k++) { const x = 34 + k * 5.5; p.poly([x, lip - 1, x + 2, lip + 4 + sn * 1.5, x + 4, lip - 1], true); }
-    p.poly([54, lip - 1.5, 57, lip + 11 + sn * 2, 60.5, lip - 1.5], true);   // the big fang
+    for (let k = 0; k < 4; k++) { const x = 34 + k * 5.5; p.poly([x, lip - 1, x + 2, lip + 4 + snr * 1.5, x + 4, lip - 1], true); }
+    p.poly([54, lip - 1.5, 57, lip + 11 + snr * 2, 60.5, lip - 1.5], true);   // the big fang
     p.poly([63, lip - 1, 64.5, lip + 4, 66.5, lip - 1], true);
     // gums show in a snarl, the muzzle wrinkles
-    if (sn > 0.2) { c.save(); c.globalAlpha *= sn; p.fill = '#6e2328'; p.poly([32, lip - 2.5, 66, lip - 3, 66, lip - 0.6, 32, lip - 0.4], true);
-      c.strokeStyle = DARK; for (let k = 0; k < 3; k++) p.curve(42 + k * 6, -12 + k, 44 + k * 6, -6 + k, 42 + k * 6, -1 + k); c.restore(); }
-    // dripping drool from the fang
-    { const dr = (t * 1.1 + (e.seed || 0) * 0.13) % 1; c.save(); c.fillStyle = 'rgba(225,235,240,0.75)'; c.beginPath(); c.ellipse(57.5, lip + 13 + dr * dr * 26, 1.6, 2.6 + dr * 2, 0, 0, TAU); c.fill();
+    if (snr > 0.2) {
+      c.save(); c.globalAlpha *= snr; bare(p, [32, lip - 2.5, 66, lip - 3, 66, lip - 0.6, 32, lip - 0.4], '#6e2328');
+      c.strokeStyle = '#0a0a0b'; for (let k = 0; k < 3; k++) p.curve(42 + k * 6, -12 + k, 44 + k * 6, -6 + k, 42 + k * 6, -1 + k); c.restore();
+    }
+    // drool dripping off the fang
+    { const dr = (t * 1.1 + seed * 0.13) % 1; c.save(); c.fillStyle = 'rgba(225,235,240,0.75)'; c.beginPath(); c.ellipse(57.5, lip + 13 + dr * dr * 26, 1.6, 2.6 + dr * 2, 0, 0, TAU); c.fill();
       c.strokeStyle = 'rgba(225,235,240,0.6)'; c.lineWidth = lw * 0.5; c.beginPath(); c.moveTo(57.5, lip + 10); c.lineTo(57.5, lip + 11 + dr * dr * 24); c.stroke(); c.restore(); }
     // nose
-    p.fill = NOSE; p.poly([64, -8, 72, -7, 75, -2, 72, 2, 65, 1], true);
+    p.fill = NOSE; p.poly([63, -8, 72, -7, 75, -2, 72, 2, 64, 1], true);
     c.save(); c.globalAlpha *= 0.5; c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(70, -5, 1.6, 1, 0, 0, TAU); c.fill(); c.restore();
     // old scars: claw rakes across the muzzle and one through the eye
     c.save(); c.strokeStyle = SCAR; c.lineWidth = lw * 1.1; c.globalAlpha *= 0.9;
     p.line(44, -15, 52, -2); p.line(50, -14, 57, -3); p.line(56, -12, 61, -4); p.line(31, -26, 40, -1); c.restore();
-    // eye: glowing, slit-pupilled, under a heavy brow
-    c.save(); c.fillStyle = 'rgba(0,0,0,0.45)'; c.beginPath(); c.ellipse(35, -11, 7.5, 5.5, -0.2, 0, TAU); c.fill(); c.restore();
+    // eye: glowing, slit-pupilled, sunk under a heavy brow
+    glow(c, 35, -11, 9, 7, 'rgba(0,0,0,0.9)', 0.6);
     D.eye(p, 35, -11, 4.2, e, 1);
     ear(true);
     c.restore();
@@ -342,7 +381,7 @@
 
   // ---------- definition (what B() in bosses.js does: drawK scales the template, the mass and the health) ----------
   const inner = { w: 300, h: 180, draw(p, e, t) { D.drawWolfBoss(p, e, t); } }, K = DRAWK;
-  const PAL = { body: '#38373b', far: '#232226', mane: '#18171a', belly: '#6d6862', mouth: '#4a0f10', teeth: '#eee4cc', claw: '#141110', nose: '#0d0c0e', scar: '#93766c', eyeGlow: '#ffc21a' };
+  const PAL = { body: '#2d2c30', far: '#1b1a1d', mane: '#121114', belly: '#625d57', mouth: '#4a0f10', teeth: '#eee4cc', claw: '#141110', nose: '#0d0c0e', scar: '#93766c', eyeGlow: '#ffc21a' };
   const def = SB.def(NAME, SB.merge({
     cat: 'boss', boss: true, creature: true, move: 'walk', temper: 'hostile', bounce: 0.05, friction: 6, huntR: 760,
     tags: ['boss', 'monster', 'big', 'scary', 'villain', 'predator'], fears: [], hunts: [], eats: [], heldMood: 'angry'
@@ -393,7 +432,13 @@
     e.howlCd -= dt; e.pounceCd -= dt; e.maulCd -= dt; e.specT -= dt;
     if (e.hurtT > 0) e.hurtT -= dt; if (e.yelpCd > 0) e.yelpCd -= dt;
     if ((e.packT -= dt) <= 0) { e.packT = 0.4; packTick(e, W); }
-    if (e.ko || !e.alive || e.dying) { if (!e.koClean) { e.koClean = true; stopAll(e); scatter(e, W); } return; }
+    if (e.ko || !e.alive || e.dying) {
+      if (!e.koClean) { e.koClean = true; stopAll(e); scatter(e, W); }
+      // a wolf drops flat on its side rather than tipping up onto its nose: undo the 90-degree K.O. tilt and the
+      // swapped box (put back on revive, see hooks)
+      if (e.ko && !e.koFlat) { e.koFlat = true; e.koAngle = 0; e.angle = 0; e.angVel = 0; if (e.h > e.w) { const w = e.w; e.w = e.h; e.h = w; } }
+      return;
+    }
     e.koClean = false;
     if (!ready(e)) { if (busy(e) && !(e.pouncePh === 'air' && !e.held)) stopAll(e); return; }
     if (e.howlT > 0) { howlTick(e, dt, W); return; }
@@ -406,8 +451,10 @@
     const moon = W.entities.find(o => o.special === 'moon' && o.alive && !o.dying);
     if (moon) { e.moonNext -= dt; if (e.moonNext <= 0) { e.moonNext = 9 + Math.random() * 3; startHowl(e, W, moon); return; } }
     else e.moonNext = Math.min(e.moonNext, 2);
-    if (e.specT > 0) return;
     const tg = e.target;
+    // something right under its nose gets mauled straight away, even between other moves
+    if (valid(e, tg) && e.maulCd <= 0 && e.specT < 0.6 && Math.abs(tg.x - e.x) - e.w / 2 < 40 * e.scale + tg.w * 0.3 && (tg.x - e.x) * e.facing > -20 && tg.bottom > e.top - 30 && tg.top < e.bottom) return startMaul(e, tg, W);
+    if (e.specT > 0) return;
     const pack = packOf(e, W).length;
     if (!valid(e, tg)) {   // nothing to hunt: now and then it calls the pack anyway
       if (e.howlCd <= 0 && pack < PACK_CAP && Math.random() < dt * 0.4) startHowl(e, W, null);
@@ -611,7 +658,8 @@
   function hooks(W) {
     if (!W || W.wolfHooked || !W.ctrlSpecial) return;
     W.wolfHooked = true;
-    const ctrlSpecial = W.ctrlSpecial;
+    const ctrlSpecial = W.ctrlSpecial, revive = W.revive;
+    if (revive) W.revive = function (e) { if (e && e.koFlat) { e.koFlat = false; if (e.ko) { const w = e.w; e.w = e.h; e.h = w; } } return revive.apply(W, arguments); };
     W.ctrlSpecial = function () {
       const e = W.ctrl && W.ctrl.e;
       if (!e || e.special !== 'giantwolf') return ctrlSpecial.apply(W, arguments);
