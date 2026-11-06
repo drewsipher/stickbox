@@ -169,7 +169,7 @@
       const ws = [-1, 1].map(s => { const p = k.group(o, 0, 0, -3); const w = k.extrude(wingShape, 1, mWing, p, 0, 0, 0, 0.3); p.scale.x = s; return p; });
       minions.push({ o, eye, ws });
     }
-    const mBolt = k.mat('#ffe0c0', { basic: true }), mBoltHalo = k.mat('#ff3010', { basic: true, opacity: 0.4 });
+    const mBolt = k.mat('#ffb080', { basic: true }), mBoltHalo = k.mat('#ff1a08', { basic: true, opacity: 0.45 });
     const bolts = [];
     for (let i = 0; i < 40; i++) { const b = k.sphere(1, mBolt, k.world); b.castShadow = false; b.visible = false; const h = k.sphere(2.3, mBoltHalo, b); h.castShadow = false; h.material.depthWrite = false; bolts.push(b); }
     const mRay = k.mat('#ff2a14', { basic: true, opacity: 0.38 }), mRayMid = k.mat('#ff4a20', { basic: true, opacity: 0.85 }), mRayCore = k.mat('#fff0e0', { basic: true });

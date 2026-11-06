@@ -100,11 +100,24 @@
     wind(d, t, p) { noise(d, t, { type: 'bandpass', f0: 300 * p, f1: 1200 * p, q: 0.8, dur: 1.2, vol: 0.35, a: 0.2 }); },
     skitter(d, t, p) { for (let k = 0; k < 7; k++) noise(d, t + k * 0.06 + R(0, 0.03), { type: 'highpass', f0: R(2500, 4500) * p, dur: 0.02, vol: 0.18 }); },
     buzz(d, t, p) { for (const f of [190, 233, 281]) tone(d, t, { type: 'sawtooth', f0: f * p * R(0.97, 1.03), f1: f * p * R(0.94, 1.06), dur: 0.6, vol: 0.06, lp: 1500, vib: R(18, 30), vibAmt: f * 0.05, a: 0.12 }); },
-    beat(d, t, p) { for (let k = 0; k < 6; k++) tone(d, t + k * 0.15, { f0: 95 * p, f1: 55, dur: 0.12, vol: 0.6 }); }
+    beat(d, t, p) { for (let k = 0; k < 6; k++) tone(d, t + k * 0.15, { f0: 95 * p, f1: 55, dur: 0.12, vol: 0.6 }); },
+    // a wolf's howl: swells up, holds with a tremble, falls away (kept under the 1.8 s voice limit)
+    howl(d, t, p) {
+      const c = S.ctx;
+      for (const [mul, vol, type] of [[1, 0.3, 'triangle'], [2.02, 0.06, 'sine'], [1.5, 0.035, 'sawtooth']]) {
+        const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter(), l = c.createOscillator(), lg = c.createGain(), F = 290 * p * mul;
+        o.type = type; f.type = 'lowpass'; f.frequency.value = 1700;
+        o.frequency.setValueAtTime(F * 0.78, t); o.frequency.exponentialRampToValueAtTime(F * 1.7, t + 0.42); o.frequency.linearRampToValueAtTime(F * 1.82, t + 1.1); o.frequency.exponentialRampToValueAtTime(F * 1.05, t + 1.68);
+        l.frequency.value = 5.5; lg.gain.value = F * 0.025; l.connect(lg); lg.connect(o.frequency);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.22); g.gain.setValueAtTime(vol, t + 1.15); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+        o.connect(f); f.connect(g); g.connect(d); o.start(t); o.stop(t + 1.72); l.start(t); l.stop(t + 1.72);
+      }
+      noise(d, t, { type: 'bandpass', f0: 800 * p, f1: 1400 * p, q: 3, dur: 1.5, vol: 0.05, a: 0.25 });
+    }
   };
   S.names = Object.keys(SOUNDS);
   // minimum seconds between two of the same sound (keeps big battles from turning into noise)
-  const GAP = { step: 0.08, hit: 0.035, heavy: 0.05, fire: 0.25, hiss: 0.3, freeze: 0.15, splat: 0.05, thud: 0.06, boom: 0.08, ko: 0.1, roar: 0.4, bellow: 0.5, screech: 0.4, charge: 0.8, wind: 0.6, beat: 0.6, swing: 0.05, pop: 0.03, buzz: 0.45, skitter: 0.4 };
+  const GAP = { step: 0.08, hit: 0.035, heavy: 0.05, fire: 0.25, hiss: 0.3, freeze: 0.15, splat: 0.05, thud: 0.06, boom: 0.08, ko: 0.1, roar: 0.4, bellow: 0.5, screech: 0.4, charge: 0.8, wind: 0.6, beat: 0.6, swing: 0.05, pop: 0.03, buzz: 0.45, skitter: 0.4, howl: 1.2 };
 
   S.play = function (name, o) {
     if (!S.on) return false;

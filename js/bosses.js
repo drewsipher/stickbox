@@ -2792,7 +2792,7 @@
       if (e.rainT > 0) {   // strafing over its prey, breathing fire straight down
         e.rainDir = e.rainDir || e.facing || 1; e.facing = e.rainDir; e.faceT = 0;
         e.vx += (e.rainDir * 250 * sq - e.vx) * k; e.vy += (clamp((hy - e.y) * 2.5, -300, 300) - e.vy) * k;
-      } else if (e.breath <= 0) {
+      } else if (!(e.breath > 0)) {
         const dir = e.rainDir || 1, hx = live ? tg.x - dir * 170 * e.scale : e.x;
         e.vx += (clamp((hx - e.x) * 2.2, -340, 340) - e.vx) * k; e.vy += (clamp((hy - e.y) * 2.5, -420, 420) - e.vy) * k;
         if (live && Math.abs(e.x - hx) < 140 * e.scale) { e.facing = dir; e.faceT = 0; }
@@ -2803,7 +2803,7 @@
           dragonAttack(e, W, 'breath');   // something else up here with it: fire straight at it
         }
       }
-      if (e.rainT <= 0 && e.breath <= 0 && (e.flyT <= 0 || !live && e.flyT < 3 || (e.rains || 0) >= 2 || ((e.rains || 0) >= 1 && Math.random() < dt * 0.8))) {
+      if (!(e.rainT > 0) && !(e.breath > 0) && (e.flyT <= 0 || !live && e.flyT < 3 || (e.rains || 0) >= 2 || ((e.rains || 0) >= 1 && Math.random() < dt * 0.8))) {
         e.flyPh = 'down'; e.flyT = 0; W.sfx('whoosh', e.x); e.say(pick(['HERE I COME!', '*dives*', 'FEEL MY WEIGHT!']));
       }
     } else if (e.flyPh === 'down') {
@@ -2837,6 +2837,7 @@
   }
   S.dragonboss = function (e, dt, W) {
     dragonHooks(W);
+    if (e.rainT == null) { e.rainT = 0; e.breath = e.breath || 0; e.whipT = e.whipT || 0; e.beatT = e.beatT || 0; e.poundT = e.poundT || 0; }   // (timers start undefined)
     for (let i = drgFires.length - 1; i >= 0; i--) { const [f, until] = drgFires[i]; if (!f.alive || f.dying || W.time > until) { if (f.alive && !f.dying) W.remove(f, 'poof'); drgFires.splice(i, 1); } }
     if (e.ko || e.held) {   // knocked out or picked up: it drops out of the sky and stops mid-attack
       if (e.flyPh || e.move === 'fly') { e.flyPh = null; e.move = 'walk'; }

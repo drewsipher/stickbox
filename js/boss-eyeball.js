@@ -336,7 +336,7 @@
     // hover off to one side of its prey, low enough to be hit back, drifting slowly so things can catch it
     if (e.flying && !e.controlled) {
       const hy = clamp(tg.y - e.h * 0.5 - 20 * e.scale, W.groundY * 0.08 + e.h / 2, W.groundY - e.h / 2 - 20);
-      const hx = tg.x + (dx >= 0 ? -1 : 1) * 230 * e.scale, kk = Math.min(1, dt * 5);
+      const ad = Math.abs(dx), hx = tg.x + (dx >= 0 ? -1 : 1) * (ad > 320 * e.scale ? 230 * e.scale : ad < 90 * e.scale ? 150 * e.scale : ad), kk = Math.min(1, dt * 5);   // closes in, then lets them come to it
       e.vy += (clamp((hy - e.y) * 2, -260, 260) + Math.sin(t * 1.9 + e.seed) * 30 - e.vy) * kk;
       e.vx += (clamp((hx - e.x) * 1.4, -95, 95) - e.vx) * kk * 0.6;
       e.facing = dx >= 0 ? 1 : -1;
@@ -371,7 +371,7 @@
     for (const o of W.entities) {
       if (!o.alive || o.dying) continue;
       const n = o.def.name, d = Math.hypot(o.x - e.x, o.y - e.y);
-      if ((n === 'camera' && o.flash > 0.8 && d < 560) || (n === 'sun' && d < 300)) { W.weaken(e, o); e.say(n === 'camera' ? 'AAARGH! The FLASH!' : 'The SUN! It BURNS my eye!'); e.eyeHurtT = 1.5; return; }
+      if ((n === 'camera' && o.flash > 0.4 && d < 600) || (n === 'sun' && d < 300)) { W.weaken(e, o); e.say(n === 'camera' ? 'AAARGH! The FLASH!' : 'The SUN! It BURNS my eye!'); e.eyeHurtT = 1.5; return; }
     }
   }
 
@@ -407,7 +407,7 @@
       if (o.rayHit === e.rayId) continue;
       o.rayHit = e.rayId;
       const m = Math.min(1, 6 / Math.sqrt(o.mass));
-      o.vx += ax * 420 * m; o.vy -= 300 * m; o.grounded = false; o.angVel += (Math.random() - 0.5) * 10;
+      o.vx += ax * 320 * m; o.vy -= 230 * m; o.grounded = false; o.angVel += (Math.random() - 0.5) * 8;
       if (o.creature) { W.hurt(o, 2, e, { quiet: true }); o.say(pick(['ZAP!', 'AAAH!', 'Yeow!', 'My eyes!'])); o.dizzy = Math.max(o.dizzy, 1); }
       W.burst('spark', o.x, o.y, 9, 220, { size: 7, col: '#ff3b1f' }); W.popText(o.x, o.top - 20, 'ZZZAP!', 22); W.shake(5);
     }
@@ -518,9 +518,9 @@
       } else {
         m.ang += dt * (1 + (m.seed % 0.5)); gx = e.x + Math.cos(m.ang) * m.r * K; gy = e.y + EY.cy * ks(e) + Math.sin(m.ang) * m.r * 0.55 * K;
         if (live && m.shotT <= 0 && !e.ko) {
-          m.shotT = 2.2 + Math.random() * 1.6;
+          m.shotT = 3 + Math.random() * 2;
           const dx = tg.x - m.x, dy = tg.y - m.y, d = Math.hypot(dx, dy) || 1;
-          if (d < 560 && Math.random() < 0.35) m.dartT = 1.1;
+          if (d < 560 && Math.random() < 0.25) m.dartT = 1.1;
           else if (d < 640) { shoot(e, m.x, m.y, dx / d * 480, dy / d * 480, 4 * K); W.sfx('zap', m.x, 0.25); }
         }
       }
