@@ -2851,9 +2851,10 @@
       let sword = false, elem = false;
       for (const o of W.entities) {
         if (o === e || !o.alive || Math.abs(o.x - e.x) > (e.w + o.w) / 2 + 24 || Math.abs(o.y - e.y) > (e.h + o.h) / 2 + 24) continue;
-        if (SB.matches(o, el.hurtBy)) elem = true; else if (o.tags.has('knight') || o.tags.has('sword')) sword = true;
+        if (o.special === 'dragonboss' || o.tags.has('knight') || o.tags.has('sword')) sword = true;   // knights, and the other dragon's touch, only sting
+        else if (SB.matches(o, el.hurtBy)) elem = true;
       }
-      if (sword && !elem) { e.dizzy = Math.min(e.dizzy, 0.35); e.hp = Math.min(e.hpMax, e.hp + 2); e.say(pick(['Curse you, sir knight!', 'A knight?! AGAIN?!', 'Ow! That sword!', 'Dragon slayers... GRR!'])); }
+      if (sword && !elem) { e.dizzy = Math.min(e.dizzy, 0.35); e.hp = Math.min(e.hpMax, e.hp + 2); if (e.def.weak.includes('knight')) e.say(pick(['Curse you, sir knight!', 'A knight?! AGAIN?!', 'Ow! That sword!', 'Dragon slayers... GRR!'])); }
       else { if (e.breath > 0 || e.rainT > 0) e.say(el.snuffSay); e.breath = 0; e.rainT = 0; e.fireLen = 0; W.burst('smoke', e.x + e.facing * 60 * K, e.y - 40 * K, 6, 60, { size: 10, life: 1 }); }   // its opposite snuffs out its breath
     }
     e.prevWeakT = e.weakT;
