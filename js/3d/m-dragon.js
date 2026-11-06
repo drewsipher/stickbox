@@ -129,14 +129,14 @@
     const mScale = tm('#ffffff', { rough: sRough, metal: 0 }, { tag: 'drgS' + BODY, map: scaleTex(BODY, '3x2', false, RIM), bumpMap: scB, bumpScale: 1.2 });
     const mScaleT = tm('#ffffff', { rough: sRough, metal: 0 }, { tag: 'drgT' + BODY, map: (() => { const t = scaleTex(BODY, '10x3', false, RIM).clone(); t.userData.shared = true; t.repeat.set(6, 2); t.needsUpdate = true; return t; })(), bumpMap: scB, bumpScale: 1 });
     const mBelly = tm('#ffffff', { rough: 0.55, glow: EMBER, glowK: 0.4 }, { tag: 'drgB' + BELLY, map: bellyTex(BELLY), emissiveMap: bellyTex(BELLY, true) });
-    const mSkin = k.mat(BODY, { rough: 0.6 }), mDark = k.mat(SB.shade(BODY, 0.3), { rough: 0.55 });
+    const mSkin = ICE ? k.mat(SB.mixColor(BELLY, BODY, 0.25), { rough: 0.35 }) : k.mat(BODY, { rough: 0.6 }), mDark = k.mat(ICE ? BELLY : SB.shade(BODY, 0.3), { rough: 0.55 });   // the ice dragon's legs and brows are steel-blue armour
     const mSpike = ICE ? k.mat(SPIKE, { rough: 0.08, opacity: 0.72, glow: '#8fdcff', glowK: 0.3 }) : k.mat(SPIKE, { rough: 0.45 }), mHorn = ICE ? k.mat(HORN, { rough: 0.06, opacity: 0.8, glow: '#bfefff', glowK: 0.25 }) : k.mat(SB.mixColor(HORN, BODY, 0.25), { rough: 0.45 }), mClaw = k.mat(CLAW, { rough: 0.25, metal: 0.2 }), mTooth = k.mat(TEETH, { rough: 0.3 });
     const mMouth = k.mat(MOUTH, { rough: 0.4, glow: EMBER, glowK: 0.2 }), mNost = k.mat('#0c0605', { rough: 0.5 });
     const mWing = ICE ? tm('#ffffff', { rough: 0.3, side: 'double', glow: '#3a7aa8', glowK: 0.3, opacity: 0.88 }, { tag: 'drgW' + WING, map: membraneTex(WING, '50,100,150') })
       : tm('#ffffff', { rough: 0.62, side: 'double', glow: '#5a0c04', glowK: 0.35 }, { tag: 'drgW' + WING, map: membraneTex(WING) });
     const mBone = k.mat(SB.mixColor(BODY, WING, 0.25), { rough: 0.5 });
     const fm = (c, o, tag) => { const m = k.mat(c, { basic: true, opacity: o, tag }); m.depthWrite = false; return m; };
-    const mFire = fm(RGB(3), ICE ? 0.38 : 0.5, 'drgF1' + ICE), mFire2 = fm(RGB(ICE ? 8 : 1), ICE ? 0.7 : 0.85, 'drgF2' + ICE), mFire3 = fm(RGB(2), ICE ? 0.45 : 0.6, 'drgF3' + ICE), mFire4 = fm(RGB(ICE ? 7 : 5), ICE ? 0.3 : 0.45, 'drgF4' + ICE);   // fire, or freezing mist
+    const mFire = fm(RGB(3), ICE ? 0.38 : 0.5, 'drgF1' + ICE), mFire2 = fm(RGB(ICE ? 8 : 1), ICE ? 0.7 : 0.85, 'drgF2' + ICE);   // the jet's cones: fire, or freezing mist
     const g = k.group(k.root); g.scale.setScalar(KD);   // built in the 2D drawing's units, scaled up like the drawing
     // rearing up turns the body about the hind feet; the landing crouch lowers it
     const PV = D.DRG_PIVOT, rearG = k.group(g, PV[0], -PV[1], 0), bod = k.group(rearG, -PV[0], PV[1], 0);
@@ -208,8 +208,12 @@
     // ---------- the fire: roaring cones and billows from the mouth along the breath ----------
     const fireG = k.group(g); fireG.visible = false;
     const fcone = (m, r, pos) => { const c = k.mesh(M3.geo('drg:fcone', () => { const cg = new T.ConeGeometry(1, 1, 14, 1, true); cg.rotateZ(PI / 2); cg.translate(0.5, 0, 0); return cg; }), m, fireG); c.castShadow = false; c.userData.r = r; return c; };
-    const cones = [fcone(mFire, 0.2), fcone(mFire2, 0.08)];
-    const NB = 10, billows = []; for (let i = 0; i < NB; i++) { const b = k.sphere(1, [mFire2, mFire3, mFire, mFire4][Math.min(3, i * 4 / NB | 0)], fireG); b.castShadow = false; b.renderOrder = 2; billows.push(b); }
+    const cones = [fcone(mFire, 0.16), fcone(mFire2, 0.07)];
+    // soft glowing puffs (sprites, always facing the camera) roll along the jet: hot near the jaws, darker as they go
+    const puffTex = canvasTex('drg:puff', 64, 64, x => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,0.75)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); });
+    const pm = (i, o) => { const m = new T.SpriteMaterial({ map: puffTex, color: new T.Color(RGB(i)), transparent: true, opacity: o, depthWrite: false, blending: T.NormalBlending }); k.own.push(m); return m; };
+    const puffMats = ICE ? [pm(8, 0.85), pm(1, 0.75), pm(2, 0.6), pm(3, 0.45)] : [pm(1, 0.85), pm(2, 0.7), pm(3, 0.6), pm(5, 0.45)];
+    const NB = 22, billows = []; for (let i = 0; i < NB; i++) { const b = new T.Sprite(puffMats[0]); b.renderOrder = 3; fireG.add(b); billows.push(b); }
 
     // ---------- wings: bones posed in the wing plane, a membrane stretched between them every frame ----------
     const wings = [];
@@ -359,15 +363,15 @@
       mBelly.emissiveIntensity = (0.15 + emberK * 2.6) * fk; mMouth.emissiveIntensity = 0.1 + emberK * 2.4 * fk;
       maw.visible = P.open > 0.12;
       // ---- the fire itself ----
-      fireG.visible = firing;
+      fireG.visible = firing && !e.invisible;
       if (firing) {
-        const L = Math.max(30, e.fireLen || R.reach * KD * (e.scale || 1)) / (KD * (e.scale || 1)), dir = v2.set(f * Math.cos(M[2]), -Math.sin(M[2]), 0).applyAxisAngle(UP, -ya);
+        const L = Math.max(30, e.fireLen || R.reach), dir = v2.set(f * Math.cos(M[2]), -Math.sin(M[2]), 0).applyAxisAngle(UP, -ya);
         fireG.position.set(tx, ty, tz); fireG.quaternion.copy(fq.setFromUnitVectors(XA, dir));
         for (let i = 0; i < cones.length; i++) { const c = cones[i], q = 1 + Math.sin(t * (21 + i * 6) + i * 2) * 0.12, len = L * (i === 1 ? 0.7 : 0.95); c.scale.set(len, L * c.userData.r * q, L * c.userData.r * q); }
         for (let i = 0; i < NB; i++) {   // billows roll out along the jet, growing and darkening as they go
-          const u = 0.12 + ((i / NB + t * 1.9 + seed * 0.1) % 1) * 0.92, r = L * (0.05 + 0.2 * Math.pow(u, 0.8)), b = billows[i];
-          b.material = [mFire2, mFire3, mFire, mFire4][Math.min(3, u * 3.6 | 0)];
-          b.position.set(u * L, Math.sin(t * 9 + i * 2.1) * r * 0.35, Math.cos(t * 7 + i * 1.3) * r * 0.35); b.scale.set(r * 1.25, r, r);
+          const u = 0.02 + ((i / NB + t * 2.2 + seed * 0.1) % 1) * 1.0, r = L * (0.06 + 0.26 * Math.pow(u, 0.8)), b = billows[i];
+          b.material = puffMats[Math.min(3, u * 4 | 0)];
+          b.position.set(u * L, Math.sin(t * 9 + i * 2.1) * r * 0.3, Math.cos(t * 7 + i * 1.3) * r * 0.3); b.scale.set(r * 2.2, r * 2.2, 1);
         }
       }
     };

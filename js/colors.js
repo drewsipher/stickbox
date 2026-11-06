@@ -91,7 +91,7 @@
     'wasp swarm': { body: '#e0780f', dark: '#160e06', wing: '#d8e2ea', gold: '#f2b632' },
     'giant scorpion': { body: '#141418', far: '#0b0b0e', leg: '#1d1b22', band: '#5a1d14' },
     'giant dragon': { body: '#2b1513', belly: '#682a18', wing: '#4e1510', spike: '#1a1110', horn: '#cfc2a4', mouth: '#3a0a08', teeth: '#eee3c6', claw: '#120c0a', ember: '#ff6a10', eyeGlow: '#ff9a1a' },
-    'ice dragon': { body: '#bcd9ea', belly: '#6f93b2', wing: '#9cc6e0', spike: '#d8f2ff', horn: '#eefaff', mouth: '#17344f', teeth: '#f4fbff', claw: '#3a5670', ember: '#6fd0ff', eyeGlow: '#7fe6ff' }
+    'ice dragon': { body: '#a2c4dc', belly: '#56799a', wing: '#8cb9d8', spike: '#cdefff', horn: '#eefaff', mouth: '#17344f', teeth: '#f4fbff', claw: '#2e4a66', ember: '#6fd0ff', eyeGlow: '#7fe6ff' }
   };
   // one colour per filled shape, in the order the item draws them
   const SEQ = {

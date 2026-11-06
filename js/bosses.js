@@ -2780,8 +2780,8 @@
   function dragonFlight(e, dt, W) {
     const sq = Math.sqrt(e.scale), k = Math.min(1, dt * 6), down = e.bottom >= W.groundY - 3;
     e.flyT -= dt;
-    if (e.flyPh === 'ctrl') { if (down && e.flyT <= 0) dragonLand(e, W, true); return; }
-    if (!e.flying) { if (down && e.flyT < 0.6) dragonLand(e, W, false); return; }   // stunned, frozen or webbed in the air: it drops out of the sky
+    if (e.flyPh === 'ctrl') { if (down && e.flyT <= 0) dragonLand(e, W, true); else if (e.flyT <= 0 && W.ctrl.down && e.bottom > W.groundY - 140 * e.scale) { e.move = 'walk'; e.vy = Math.max(e.vy, 600); } return; }
+    if (!e.flying) { if (down && (e.flyT < 0.6 || e.flyPh === 'down')) dragonLand(e, W, e.flyPh === 'down'); return; }   // stunned, frozen or webbed in the air it drops out of the sky (and at the end of a dive it falls the last bit)
     if (e.controlled) { e.flyPh = 'ctrl'; return; }
     const tg = e.target, live = tg && tg.alive && !tg.dying && !tg.ko;
     if (e.flyPh === 'up') {
@@ -2790,7 +2790,7 @@
     } else if (e.flyPh === 'air') {
       const hy = clamp(live ? tg.top - 210 * e.scale - e.h * 0.3 : W.groundY * 0.3, W.groundY * 0.08 + e.h / 2, W.groundY - e.h / 2 - 140 * e.scale);
       if (e.rainT > 0) {   // strafing over its prey, breathing fire straight down
-        e.facing = e.rainDir; e.faceT = 0;
+        e.rainDir = e.rainDir || e.facing || 1; e.facing = e.rainDir; e.faceT = 0;
         e.vx += (e.rainDir * 250 * sq - e.vx) * k; e.vy += (clamp((hy - e.y) * 2.5, -300, 300) - e.vy) * k;
       } else if (e.breath <= 0) {
         const dir = e.rainDir || 1, hx = live ? tg.x - dir * 170 * e.scale : e.x;
@@ -2804,12 +2804,13 @@
         }
       }
       if (e.rainT <= 0 && e.breath <= 0 && (e.flyT <= 0 || !live && e.flyT < 3 || (e.rains || 0) >= 2 || ((e.rains || 0) >= 1 && Math.random() < dt * 0.8))) {
-        e.flyPh = 'down'; W.sfx('whoosh', e.x); e.say(pick(['HERE I COME!', '*dives*', 'FEEL MY WEIGHT!']));
+        e.flyPh = 'down'; e.flyT = 0; W.sfx('whoosh', e.x); e.say(pick(['HERE I COME!', '*dives*', 'FEEL MY WEIGHT!']));
       }
     } else if (e.flyPh === 'down') {
       const lx = live ? tg.x : e.x;
       e.vx += (clamp((lx - e.x) * 2.2, -420, 420) - e.vx) * k; e.vy += (780 * sq - e.vy) * Math.min(1, dt * 4);
       if (down) dragonLand(e, W, true);
+      else if (e.bottom > W.groundY - 140 * e.scale || e.flyT < -3) { e.move = 'walk'; e.flyT = 0; e.vy = Math.max(e.vy, 600); }   // fold the wings and drop the last bit (flight keeps it off the ground)
     }
   }
   function dragonAttack(e, W, kind) {
@@ -2906,7 +2907,7 @@
     const dx = tg.x - e.x, dy = tg.y - e.y, adx = Math.abs(dx), ahead = dx * e.facing > 0;
     if (dragonBehind(e, W) && (e.lastAtk !== 'tail' || Math.random() < 0.45)) return dragonAttack(e, W, 'tail');
     if ((tg.flying || tg.bottom < e.top - 40 * e.scale) && e.lastAtk !== 'fly') return dragonAttack(e, W, 'fly');
-    if (adx < e.w * 0.3 && Math.abs(dy) < e.h && e.lastAtk !== 'tail' && Math.random() < 0.7) return dragonAttack(e, W, 'tail');   // right under its feet: the tail sweeps round underneath
+    if (adx < e.w * 0.55 && Math.abs(dy) < e.h && e.lastAtk !== 'tail' && Math.random() < 0.6) { e.facing = dx >= 0 ? -1 : 1; e.faceT = 0; return dragonAttack(e, W, 'tail'); }   // too close for fire: it spins round and lashes them with its tail
     if (!ahead && adx > e.w * 0.25) { e.specT = 0.2; return; }   // let it turn round first
     const inReach = adx < R.reach * K * 0.95 && Math.abs(dy) < 220 * e.scale && adx > e.w * 0.2;
     if (inReach && (e.lastAtk !== 'breath' || Math.random() < 0.4)) return dragonAttack(e, W, 'breath');
